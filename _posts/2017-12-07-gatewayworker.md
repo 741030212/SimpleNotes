@@ -4,7 +4,7 @@ title: 'gateWayWorker服务器回调'
 subtitle: 'thinkphp3.2回调任务处理'
 date: 2017-12-07
 categories: php
-cover:'http://on2171g4d.bkt.clouddn.com/jekyll-theme-h2o-postcover.jpg'
+cover: 'http://on2171g4d.bkt.clouddn.com/jekyll-theme-h2o-postcover.jpg'
 tags: gateWayWorker
 ---
 
