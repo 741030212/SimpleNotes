@@ -2,7 +2,7 @@
 title: 'goJson的独立博客'
 description: 'gojson record my life with you,record my simple IT level。'
 keyword: 'gojson ,PHP, Linux, 前端博客,php,mysql,js,jq, javascript,php-fpm,nginx, 设计'
-url: 'http://notes.gojson.cn' # your host
+url: 'http://gojson.gojson.cn' # your host
 
 # if you don't need baseurl, you should leave this value blank.
 baseurl: ''
