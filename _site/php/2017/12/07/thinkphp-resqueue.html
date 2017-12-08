@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thinkphp3.2 配置消息队列php-Resque - goJson的独立博客</title>
+    <meta name="author"  content="gojson">
+    <meta name="description" content="Thinkphp3.2 配置消息队列php-Resque">
+    <meta name="keywords"  content="php">
+    <!-- Open Graph -->
+    <meta property="og:title" content="Thinkphp3.2 配置消息队列php-Resque - goJson的独立博客">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="http://localhost:4000/php/2017/12/07/thinkphp-resqueue.html">
+    <meta property="og:description" content="gojson record my life with you,record my simple IT level。">
+    <meta property="og:site_name" content="goJson的独立博客">
+    <link rel="stylesheet" href="//cdn.staticfile.org/normalize/6.0.0/normalize.min.css">
+    <link rel="stylesheet" href="//at.alicdn.com/t/font_roc50gemkxpw4s4i.css">
+    <link rel="stylesheet" href="/assets/css/github-markdown.css">
+    <link rel="stylesheet" href="/assets/css/prism.css">
+    <link rel="stylesheet" href="/assets/css/share.min.css">
+    <link rel="stylesheet" href="/assets/css/app.min.css">
+</head>
+<body>
+    <!--[if lt IE 10]>
+<div class="alert-danger" role="alert">你的浏览器实在太太太旧了，放学别走，升级完浏览器再说！<a target="_blank" class="alert-link" href="http://browsehappy.com">立即升级</a></div>
+<![endif]-->
+<input id="nm-switch" type="hidden" value="true">
+
+<header class="g-header">
+    <div class="g-logo">
+      <a href="/"></a>
+    </div>
+    <i id="menu-toggle" class="iconfont icon-menu"></i>
+    <nav class="g-nav">
+        <ul>
+            
+            <li><a href="/">home</a></li>
+            
+            <li><a href="/tags.html">tags</a></li>
+            
+        </ul>
+    </nav>
+</header>
+
+
+<header class="g-banner post-header post-pattern-circuitBoard bgcolor-default " data-theme="default">
+    <div class="post-wrapper">
+        <div class="post-tags">
+            
+            
+            <a href="http://localhost:4000/tags#php" class="post-tag">php</a>
+            
+            
+        </div>
+        <h1>Thinkphp3.2 配置消息队列php-Resque</h1>
+        <div class="post-meta">
+            <span class="post-meta-item"><i class="iconfont icon-author"></i><a href="http://localhost:4000" target="_blank" rel="author">gojson</a></></span>
+            <time class="post-meta-item" datetime="17-12-07"><i class="iconfont icon-date"></i>07 Dec 2017</time>
+        </div>
+    </div>
+    
+    <div class="filter"></div>
+    <div class="post-cover" style="background: url('http://on2171g4d.bkt.clouddn.com/jekyll-theme-h2o-postcover.jpg') center no-repeat; background-size: cover;">
+    
+</header>
+
+<div class="post-content">
+    
+    <h2 class="post-subtitle">php-Resque消息队列</h2>
+    
+    <article class="markdown-body">
+        <h2 id="10-情景描述">1.0 情景描述:</h2>
+<p>使用ThinkPhp3.2 + php-Resque 实现消息队列,
+php-resque是php环境中一个轻量级的队列服务。具体队列服务是做什么用的，请自行百度！
+将源码更新到 ThinkPHP/Library/Vendor/php-resque/ 目录中</p>
+
+<h2 id="git地址"><a href="https://github.com/5ini99/tp3-resque">git地址</a></h2>
+
+<h2 id="20-使用方法">2.0 使用方法</h2>
+<ul>
+  <li><strong>创建队列入口文件resque</strong></li>
+</ul>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#!/usr/bin/env php
+<span class="cp">&lt;?php</span>
+<span class="nb">ini_set</span><span class="p">(</span><span class="s1">'display_errors'</span><span class="p">,</span> <span class="kc">true</span><span class="p">);</span>
+<span class="nb">error_reporting</span><span class="p">(</span><span class="k">E_ERROR</span><span class="p">);</span>
+<span class="c1">// 定义应用目录
+</span><span class="nb">define</span><span class="p">(</span><span class="s1">'APP_PATH'</span><span class="p">,</span><span class="s1">'./Application/'</span><span class="p">);</span>
+<span class="nb">define</span><span class="p">(</span><span class="s1">'MODE_NAME'</span><span class="p">,</span> <span class="s1">'cli'</span><span class="p">);</span> <span class="c1">// 自定义cli模式
+</span><span class="nb">define</span><span class="p">(</span><span class="s1">'BIND_MODULE'</span><span class="p">,</span> <span class="s1">'Home'</span><span class="p">);</span>  <span class="c1">// 绑定到Home模块
+</span><span class="nb">define</span><span class="p">(</span><span class="s1">'BIND_CONTROLLER'</span><span class="p">,</span> <span class="s1">'Queue'</span><span class="p">);</span> <span class="c1">// 绑定到Queue控制器
+</span><span class="nb">define</span><span class="p">(</span><span class="s1">'BIND_ACTION'</span><span class="p">,</span> <span class="s1">'index'</span><span class="p">);</span> <span class="c1">// 绑定到index方法
+// 处理自定义参数
+</span><span class="nv">$act</span> <span class="o">=</span> <span class="nv">$argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">??</span> <span class="s1">'start'</span><span class="p">;</span>
+<span class="nb">putenv</span><span class="p">(</span><span class="s2">"Q_ACTION=</span><span class="si">{</span><span class="nv">$act</span><span class="si">}</span><span class="s2">"</span><span class="p">);</span>
+<span class="nb">putenv</span><span class="p">(</span><span class="s2">"Q_ARGV="</span> <span class="o">.</span> <span class="nb">json_encode</span><span class="p">(</span><span class="nv">$argv</span><span class="p">));</span>
+<span class="k">require</span> <span class="s1">'./ThinkPHP/ThinkPHP.php'</span><span class="p">;</span>
+</code></pre></div></div>
+
+<ul>
+  <li><strong>config.php 配置队列</strong></li>
+</ul>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cm">/* 消息队列配置 */</span>
+<span class="s1">'QUEUE'</span> <span class="o">=&gt;</span> <span class="k">array</span><span class="p">(</span>
+    <span class="s1">'type'</span> <span class="o">=&gt;</span> <span class="s1">'redis'</span><span class="p">,</span>
+    <span class="s1">'host'</span> <span class="o">=&gt;</span> <span class="s1">'127.0.0.1'</span><span class="p">,</span>
+    <span class="s1">'port'</span> <span class="o">=&gt;</span>  <span class="s1">'6379'</span><span class="p">,</span>
+    <span class="s1">'prefix'</span> <span class="o">=&gt;</span> <span class="s1">'queue'</span><span class="p">,</span>
+    <span class="s1">'auth'</span> <span class="o">=&gt;</span>  <span class="s1">''</span><span class="p">,</span>
+<span class="p">),</span>
+
+</code></pre></div></div>
+
+<ul>
+  <li><strong>cli 命令</strong></li>
+</ul>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">php</span> <span class="nx">resque</span> <span class="nx">start</span>
+<span class="nx">php</span> <span class="nx">resque</span> <span class="nx">start</span> <span class="o">--</span><span class="nx">queue</span><span class="o">=</span><span class="k">default</span> <span class="o">--</span><span class="nx">pid</span><span class="o">=/</span><span class="nx">tmp</span><span class="o">/</span><span class="nx">resque</span><span class="o">.</span><span class="nx">pid</span> <span class="o">--</span><span class="nx">debug</span><span class="o">=</span><span class="mi">1</span>
+<span class="nx">php</span> <span class="nx">resque</span> <span class="nx">start</span> <span class="o">--</span><span class="nx">queue</span><span class="o">=</span><span class="k">default</span> <span class="o">--</span><span class="nx">pid</span><span class="o">=/</span><span class="nx">tmp</span><span class="o">/</span><span class="nx">resque</span><span class="o">.</span><span class="nx">pid</span> <span class="o">--</span><span class="nx">debug</span><span class="o">=</span><span class="mi">1</span> <span class="o">&amp;</span>
+<span class="o">--</span><span class="nx">queue</span> <span class="o">-</span> <span class="nx">需要执行的队列的名字</span><span class="err">，</span><span class="nx">可以为空</span><span class="err">，</span><span class="nx">也可以多个以</span><span class="p">,</span><span class="nx">分割</span>
+<span class="o">--</span><span class="nx">interval</span> <span class="o">-</span><span class="nx">在队列中循环的间隔时间</span><span class="err">，</span><span class="nx">即完成一个任务后的等待时间</span><span class="err">，</span><span class="nx">默认是5秒</span>
+<span class="o">--</span><span class="nb">count</span> <span class="o">-</span> <span class="nx">需要创建的Worker的数量</span><span class="err">。</span><span class="nx">所有的Worker都具有相同的属性</span><span class="err">。</span><span class="nx">默认是创建1个Worker</span>
+<span class="o">--</span><span class="nx">debug</span> <span class="o">-</span> <span class="nx">设置</span><span class="err">“</span><span class="mi">1</span><span class="err">”</span><span class="nx">启用更啰嗦模式</span><span class="err">，</span><span class="nx">会输出详细的调试信息</span>
+<span class="o">--</span><span class="nx">pid</span> <span class="o">-</span> <span class="nx">手动指定PID文件的位置</span><span class="err">，</span><span class="nx">适用于单Worker运行方式</span>
+
+</code></pre></div></div>
+
+<ul>
+  <li><strong>创建控制器</strong></li>
+</ul>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<span class="sd">/**************************************************
+ *    Filename:      QueueController.class.php
+ *    Copyright:     (C) 2017 All rights reserved
+ *    Author:        Theast
+ *    Description:   ---
+ *    Create:        2017-01-08 21:47:52
+ *    Last Modified:  2017-02-09 20:35:36
+ *************************************************/</span> 
+<span class="k">namespace</span> <span class="nx">Job\Controller</span><span class="p">;</span>
+
+<span class="k">use</span> <span class="nx">Think\Controller</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">Exception</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">Resque</span><span class="p">;</span>
+
+<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nx">IS_CLI</span><span class="p">)</span>  <span class="k">die</span><span class="p">(</span><span class="s1">'The file can only be run in cli mode!'</span><span class="p">);</span>
+<span class="sd">/***
+ * queue入口
+ * Class Worker
+ * @package Job\Controller
+ */</span>
+<span class="k">class</span> <span class="nc">QueueController</span> <span class="k">extends</span> <span class="nx">Controller</span><span class="p">{</span>
+    <span class="k">protected</span> <span class="nv">$vendor</span><span class="p">;</span>
+    <span class="k">protected</span> <span class="nv">$args</span> <span class="o">=</span> <span class="p">[];</span>
+    <span class="k">protected</span> <span class="nv">$keys</span> <span class="o">=</span> <span class="p">[];</span>
+    <span class="k">protected</span> <span class="nv">$queues</span> <span class="o">=</span> <span class="s1">'*'</span><span class="p">;</span>
+
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">__construct</span><span class="p">()</span> <span class="p">{</span>
+        <span class="k">parent</span><span class="o">::</span><span class="na">__construct</span><span class="p">();</span> 
+
+        <span class="nx">vendor</span><span class="p">(</span><span class="s1">'Resque.autoload'</span><span class="p">);</span>
+        <span class="nv">$argv</span> <span class="o">=</span> <span class="nb">json_decode</span><span class="p">(</span><span class="nb">getenv</span><span class="p">(</span><span class="s1">'Q_ARGV'</span><span class="p">));</span>
+        <span class="k">foreach</span> <span class="p">(</span><span class="nv">$argv</span> <span class="k">as</span> <span class="nv">$item</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="nb">strpos</span><span class="p">(</span><span class="nv">$item</span><span class="p">,</span> <span class="s1">'='</span><span class="p">))</span> <span class="p">{</span>
+                <span class="k">list</span><span class="p">(</span><span class="nv">$key</span><span class="p">,</span> <span class="nv">$val</span><span class="p">)</span> <span class="o">=</span> <span class="nb">explode</span><span class="p">(</span><span class="s1">'='</span><span class="p">,</span> <span class="nv">$item</span><span class="p">);</span>
+            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                <span class="nv">$key</span> <span class="o">=</span> <span class="nv">$val</span> <span class="o">=</span> <span class="nv">$item</span><span class="p">;</span>
+            <span class="p">}</span>
+            <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">keys</span><span class="p">[]</span> <span class="o">=</span> <span class="nv">$key</span><span class="p">;</span>
+            <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">args</span><span class="p">[</span><span class="nv">$key</span><span class="p">]</span> <span class="o">=</span> <span class="nv">$val</span><span class="p">;</span>
+        <span class="p">}</span>
+    
+        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">init</span><span class="p">();</span>
+    <span class="p">}</span>
+
+    <span class="sd">/**
+     * 启动队列服务,配置队列服务信息
+     * */</span>
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">run</span><span class="p">()</span> <span class="p">{</span>
+        <span class="c1">// 处理队列配置
+</span>        <span class="nv">$config</span> <span class="o">=</span> <span class="nx">C</span><span class="p">(</span><span class="s1">'QUEUE'</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nv">$config</span><span class="p">)</span> <span class="p">{</span>
+            <span class="c1">// 初始化队列服务,使用database(1)
+</span>            <span class="nx">\Resque</span><span class="o">::</span><span class="na">setBackend</span><span class="p">([</span><span class="s1">'redis'</span> <span class="o">=&gt;</span> <span class="nv">$config</span><span class="p">],</span> <span class="mi">1</span><span class="p">);</span>
+            <span class="c1">// 初始化缓存前缀
+</span>            <span class="k">if</span><span class="p">(</span><span class="nb">isset</span><span class="p">(</span><span class="nv">$config</span><span class="p">[</span><span class="s1">'prefix'</span><span class="p">])</span> <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="k">empty</span><span class="p">(</span><span class="nv">$config</span><span class="p">[</span><span class="s1">'prefix'</span><span class="p">]))</span>
+                <span class="nx">\Resque\Redis</span><span class="o">::</span><span class="na">prefix</span><span class="p">(</span><span class="nv">$config</span><span class="p">[</span><span class="s1">'prefix'</span><span class="p">]);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="sd">/**
+     * 执行队列
+     * 环境变量参数值：
+     * --queue|QUEUE: 需要执行的队列的名字
+     * --interval|INTERVAL：在队列中循环的间隔时间，即完成一个任务后的等待时间，默认是5秒
+     * --app|APP_INCLUDE：需要自动载入PHP文件路径，Worker需要知道你的Job的位置并载入Job
+     * --count|COUNT：需要创建的Worker的数量。所有的Worker都具有相同的属性。默认是创建1个Worker
+     * --debug|VVERBOSE：设置“1”启用更啰嗦模式，会输出详细的调试信息
+     * --pid|PIDFILE：手动指定PID文件的位置，适用于单Worker运行方式
+     */</span>
+    <span class="k">private</span> <span class="k">function</span> <span class="nf">init</span><span class="p">()</span> <span class="p">{</span>
+        <span class="nv">$is_sington</span> <span class="o">=</span> <span class="kc">false</span><span class="p">;</span> <span class="c1">//是否单例运行，单例运行会在tmp目录下建立一个唯一的PID
+</span>
+        <span class="c1">// 根据参数设置QUEUE环境变量
+</span>        <span class="nv">$QUEUE</span> <span class="o">=</span> <span class="nb">in_array</span><span class="p">(</span><span class="s1">'--queue'</span><span class="p">,</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">keys</span><span class="p">)</span> <span class="o">?</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">args</span><span class="p">[</span><span class="s1">'--queue'</span><span class="p">]</span> <span class="o">:</span> <span class="s1">'*'</span><span class="p">;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="k">empty</span><span class="p">(</span><span class="nv">$QUEUE</span><span class="p">))</span> <span class="p">{</span>
+            <span class="k">die</span><span class="p">(</span><span class="s2">"Set QUEUE env var containing the list of queues to work.</span><span class="se">\n</span><span class="s2">"</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">queues</span> <span class="o">=</span> <span class="nb">explode</span><span class="p">(</span><span class="s1">','</span><span class="p">,</span> <span class="nv">$QUEUE</span><span class="p">);</span>
+
+        <span class="c1">// 根据参数设置INTERVAL环境变量
+</span>        <span class="nv">$interval</span> <span class="o">=</span> <span class="nb">in_array</span><span class="p">(</span><span class="s1">'--interval'</span><span class="p">,</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">keys</span><span class="p">)</span> <span class="o">?</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">args</span><span class="p">[</span><span class="s1">'--interval'</span><span class="p">]</span> <span class="o">:</span> <span class="mi">5</span><span class="p">;</span>
+        <span class="nb">putenv</span><span class="p">(</span><span class="s2">"INTERVAL=</span><span class="si">{</span><span class="nv">$interval</span><span class="si">}</span><span class="s2">"</span><span class="p">);</span>
+
+        <span class="c1">// 根据参数设置COUNT环境变量
+</span>        <span class="nv">$count</span> <span class="o">=</span> <span class="nb">in_array</span><span class="p">(</span><span class="s1">'--count'</span><span class="p">,</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">keys</span><span class="p">)</span> <span class="o">?</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">args</span><span class="p">[</span><span class="s1">'--count'</span><span class="p">]</span> <span class="o">:</span> <span class="mi">1</span><span class="p">;</span>
+        <span class="nb">putenv</span><span class="p">(</span><span class="s2">"COUNT=</span><span class="si">{</span><span class="nv">$count</span><span class="si">}</span><span class="s2">"</span><span class="p">);</span>
+
+        <span class="c1">// 根据参数设置APP_INCLUDE环境变量
+</span>        <span class="nv">$app</span> <span class="o">=</span> <span class="nb">in_array</span><span class="p">(</span><span class="s1">'--app'</span><span class="p">,</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">keys</span><span class="p">)</span> <span class="o">?</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">args</span><span class="p">[</span><span class="s1">'--app'</span><span class="p">]</span> <span class="o">:</span> <span class="s1">''</span><span class="p">;</span>
+        <span class="nb">putenv</span><span class="p">(</span><span class="s2">"APP_INCLUDE=</span><span class="si">{</span><span class="nv">$app</span><span class="si">}</span><span class="s2">"</span><span class="p">);</span>
+
+        <span class="c1">// 根据参数设置PIDFILE环境变量
+</span>        <span class="nv">$pid</span> <span class="o">=</span> <span class="nb">in_array</span><span class="p">(</span><span class="s1">'--pid'</span><span class="p">,</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">keys</span><span class="p">)</span> <span class="o">?</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">args</span><span class="p">[</span><span class="s1">'--pid'</span><span class="p">]</span> <span class="o">:</span> <span class="s1">''</span><span class="p">;</span>
+        <span class="nb">putenv</span><span class="p">(</span><span class="s2">"PIDFILE=</span><span class="si">{</span><span class="nv">$pid</span><span class="si">}</span><span class="s2">"</span><span class="p">);</span>
+
+        <span class="c1">// 根据参数设置VVERBOSE环境变量
+</span>        <span class="nv">$debug</span> <span class="o">=</span> <span class="nb">in_array</span><span class="p">(</span><span class="s1">'--debug'</span><span class="p">,</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">keys</span><span class="p">)</span> <span class="o">?</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">args</span><span class="p">[</span><span class="s1">'--debug'</span><span class="p">]</span> <span class="o">:</span> <span class="s1">''</span><span class="p">;</span>
+        <span class="nb">putenv</span><span class="p">(</span><span class="s2">"VVERBOSE=</span><span class="si">{</span><span class="nv">$debug</span><span class="si">}</span><span class="s2">"</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">index</span><span class="p">()</span> <span class="p">{</span>
+        <span class="nv">$act</span> <span class="o">=</span> <span class="nb">getenv</span><span class="p">(</span><span class="s1">'Q_ACTION'</span><span class="p">);</span>
+        <span class="k">switch</span> <span class="p">(</span><span class="nv">$act</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">case</span> <span class="s1">'stop'</span><span class="o">:</span>
+            <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">stop</span><span class="p">();</span>
+            <span class="k">break</span><span class="p">;</span>
+        <span class="k">case</span> <span class="s1">'status'</span><span class="o">:</span>
+            <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">status</span><span class="p">();</span>
+            <span class="k">break</span><span class="p">;</span>
+        <span class="k">default</span><span class="o">:</span>
+            <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">start</span><span class="p">();</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="sd">/**
+     * 开始队列
+     */</span>
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">start</span><span class="p">()</span> <span class="p">{</span>
+        <span class="c1">// 载入任务类
+</span>        <span class="nv">$path</span> <span class="o">=</span> <span class="nx">APP_PATH</span> <span class="o">.</span> <span class="s1">'Job'</span><span class="p">;</span>
+        <span class="nv">$flag</span> <span class="o">=</span> <span class="nx">\FilesystemIterator</span><span class="o">::</span><span class="na">KEY_AS_FILENAME</span><span class="p">;</span>
+        <span class="nv">$glob</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">\FilesystemIterator</span><span class="p">(</span><span class="nv">$path</span><span class="p">,</span> <span class="nv">$flag</span><span class="p">);</span>
+        <span class="k">foreach</span> <span class="p">(</span><span class="nv">$glob</span> <span class="k">as</span> <span class="nv">$file</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">if</span><span class="p">(</span><span class="s1">'php'</span> <span class="o">===</span> <span class="nb">pathinfo</span><span class="p">(</span><span class="nv">$file</span><span class="p">,</span> <span class="nx">PATHINFO_EXTENSION</span><span class="p">))</span>
+                <span class="k">require</span> <span class="nb">realpath</span><span class="p">(</span><span class="nv">$file</span><span class="p">);</span>
+        <span class="p">}</span>
+
+        <span class="nv">$logLevel</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+        <span class="nv">$LOGGING</span> <span class="o">=</span> <span class="nb">getenv</span><span class="p">(</span><span class="s1">'LOGGING'</span><span class="p">);</span>
+        <span class="nv">$VERBOSE</span> <span class="o">=</span> <span class="nb">getenv</span><span class="p">(</span><span class="s1">'VERBOSE'</span><span class="p">);</span>
+        <span class="nv">$VVERBOSE</span> <span class="o">=</span> <span class="nb">getenv</span><span class="p">(</span><span class="s1">'VVERBOSE'</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="k">empty</span><span class="p">(</span><span class="nv">$LOGGING</span><span class="p">)</span> <span class="o">||</span> <span class="o">!</span><span class="k">empty</span><span class="p">(</span><span class="nv">$VERBOSE</span><span class="p">))</span> <span class="p">{</span>
+            <span class="nv">$logLevel</span> <span class="o">=</span> <span class="nx">Resque\Worker</span><span class="o">::</span><span class="na">LOG_NORMAL</span><span class="p">;</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="k">empty</span><span class="p">(</span><span class="nv">$VVERBOSE</span><span class="p">))</span> <span class="p">{</span>
+                <span class="nv">$logLevel</span> <span class="o">=</span> <span class="nx">Resque\Worker</span><span class="o">::</span><span class="na">LOG_VERBOSE</span><span class="p">;</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+
+        <span class="nv">$APP_INCLUDE</span> <span class="o">=</span> <span class="nb">getenv</span><span class="p">(</span><span class="s1">'APP_INCLUDE'</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nv">$APP_INCLUDE</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nb">file_exists</span><span class="p">(</span><span class="nv">$APP_INCLUDE</span><span class="p">))</span> <span class="p">{</span>
+                <span class="k">die</span><span class="p">(</span><span class="s1">'APP_INCLUDE ('</span> <span class="o">.</span> <span class="nv">$APP_INCLUDE</span> <span class="o">.</span> <span class="s2">") does not exist.</span><span class="se">\n</span><span class="s2">"</span><span class="p">);</span>
+            <span class="p">}</span>
+            <span class="k">require_once</span> <span class="nv">$APP_INCLUDE</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="nv">$interval</span> <span class="o">=</span> <span class="mi">5</span><span class="p">;</span>
+        <span class="nv">$INTERVAL</span> <span class="o">=</span> <span class="nb">getenv</span><span class="p">(</span><span class="s1">'INTERVAL'</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="k">empty</span><span class="p">(</span><span class="nv">$INTERVAL</span><span class="p">))</span> <span class="p">{</span>
+            <span class="nv">$interval</span> <span class="o">=</span> <span class="nv">$INTERVAL</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="nv">$count</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+        <span class="nv">$COUNT</span> <span class="o">=</span> <span class="nb">getenv</span><span class="p">(</span><span class="s1">'COUNT'</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="k">empty</span><span class="p">(</span><span class="nv">$COUNT</span><span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="nv">$COUNT</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nv">$count</span> <span class="o">=</span> <span class="nv">$COUNT</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="nv">$count</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">for</span> <span class="p">(</span><span class="nv">$i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="nv">$i</span> <span class="o">&lt;</span> <span class="nv">$count</span><span class="p">;</span> <span class="o">++</span><span class="nv">$i</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nv">$pid</span> <span class="o">=</span> <span class="nb">pcntl_fork</span><span class="p">();</span>
+                <span class="k">if</span> <span class="p">(</span><span class="nv">$pid</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="k">die</span><span class="p">(</span><span class="s2">"Could not fork worker "</span> <span class="o">.</span> <span class="nv">$i</span> <span class="o">.</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">);</span>
+                <span class="p">}</span> <span class="c1">// Child, start the worker
+</span>                <span class="k">else</span> <span class="p">{</span>
+                    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nv">$pid</span><span class="p">)</span> <span class="p">{</span>
+                        <span class="nv">$worker</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Resque\Worker</span><span class="p">(</span><span class="nv">$this</span><span class="o">-&gt;</span><span class="na">queues</span><span class="p">);</span>
+                        <span class="nv">$worker</span><span class="o">-&gt;</span><span class="na">logLevel</span> <span class="o">=</span> <span class="nv">$logLevel</span><span class="p">;</span>
+                        <span class="nb">fwrite</span><span class="p">(</span><span class="nx">STDOUT</span><span class="p">,</span> <span class="s1">'*** Starting worker '</span> <span class="o">.</span> <span class="nv">$worker</span> <span class="o">.</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">);</span>
+                        <span class="nv">$worker</span><span class="o">-&gt;</span><span class="na">work</span><span class="p">(</span><span class="nv">$interval</span><span class="p">);</span>
+                        <span class="k">break</span><span class="p">;</span>
+                    <span class="p">}</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">}</span> <span class="c1">// Start a single worker
+</span>        <span class="k">else</span> <span class="p">{</span>
+            <span class="nv">$worker</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Resque\Worker</span><span class="p">(</span><span class="nv">$this</span><span class="o">-&gt;</span><span class="na">queues</span><span class="p">);</span>
+            <span class="nv">$worker</span><span class="o">-&gt;</span><span class="na">logLevel</span> <span class="o">=</span> <span class="nv">$logLevel</span><span class="p">;</span>
+
+            <span class="nv">$PIDFILE</span> <span class="o">=</span> <span class="nb">getenv</span><span class="p">(</span><span class="s1">'PIDFILE'</span><span class="p">);</span>
+            <span class="k">if</span> <span class="p">(</span><span class="nv">$PIDFILE</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nb">file_put_contents</span><span class="p">(</span><span class="nv">$PIDFILE</span><span class="p">,</span> <span class="nb">getmypid</span><span class="p">())</span> <span class="k">or</span>
+                    <span class="k">die</span><span class="p">(</span><span class="s1">'Could not write PID information to '</span> <span class="o">.</span> <span class="nv">$PIDFILE</span><span class="p">);</span>
+            <span class="p">}</span>
+
+            <span class="nb">fwrite</span><span class="p">(</span><span class="nx">STDOUT</span><span class="p">,</span> <span class="s1">'*** Starting worker '</span> <span class="o">.</span> <span class="nv">$worker</span> <span class="o">.</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">);</span>
+            <span class="nv">$worker</span><span class="o">-&gt;</span><span class="na">work</span><span class="p">(</span><span class="nv">$interval</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="sd">/**
+     * 停止队列
+     */</span>
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">stop</span><span class="p">()</span> <span class="p">{</span>
+        <span class="nv">$worker</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Resque\Worker</span><span class="p">(</span><span class="nv">$this</span><span class="o">-&gt;</span><span class="na">queues</span><span class="p">);</span>
+        <span class="nv">$worker</span><span class="o">-&gt;</span><span class="na">shutdown</span><span class="p">();</span>
+    <span class="p">}</span>
+
+    <span class="sd">/**
+     * 查看某个任务状态
+     */</span>
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">status</span><span class="p">()</span> <span class="p">{</span>
+        <span class="nv">$id</span> <span class="o">=</span> <span class="nb">in_array</span><span class="p">(</span><span class="s1">'--id'</span><span class="p">,</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">keys</span><span class="p">)</span> <span class="o">?</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">args</span><span class="p">[</span><span class="s1">'--id'</span><span class="p">]</span> <span class="o">:</span> <span class="s1">''</span><span class="p">;</span>
+        <span class="nv">$status</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">\Resque\Job\Status</span><span class="p">(</span><span class="nv">$id</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="nv">$status</span><span class="o">-&gt;</span><span class="na">isTracking</span><span class="p">())</span> <span class="p">{</span>
+            <span class="k">die</span><span class="p">(</span><span class="s2">"Resque is not tracking the status of this job.</span><span class="se">\n</span><span class="s2">"</span><span class="p">);</span>
+        <span class="p">}</span>
+
+        <span class="k">echo</span> <span class="s2">"Tracking status of "</span> <span class="o">.</span> <span class="nv">$id</span> <span class="o">.</span> <span class="s2">". Press [break] to stop.</span><span class="se">\n\n</span><span class="s2">"</span><span class="p">;</span>
+        <span class="k">while</span> <span class="p">(</span><span class="kc">true</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nb">fwrite</span><span class="p">(</span><span class="nx">STDOUT</span><span class="p">,</span> <span class="s2">"Status of "</span> <span class="o">.</span> <span class="nv">$id</span> <span class="o">.</span> <span class="s2">" is: "</span> <span class="o">.</span> <span class="nv">$status</span><span class="o">-&gt;</span><span class="na">get</span><span class="p">()</span> <span class="o">.</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="p">);</span>
+            <span class="nb">sleep</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+</code></pre></div></div>
+
+<ul>
+  <li><strong>生产者-控制器:crontab 中添加任务,定时执行此方法</strong></li>
+</ul>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="sd">/**
+     * crontab调此任务,或者 由server回调此任务
+     * @return json
+     * */</span>
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">crontab</span><span class="p">(){</span>
+        <span class="k">if</span><span class="p">(</span><span class="nx">IS_ClI</span> <span class="o">||</span> <span class="nx">IS_POST</span><span class="p">){</span>
+            <span class="c1">// 记录日志
+</span>            <span class="nv">$json</span> <span class="o">=</span> <span class="nb">json_encode</span><span class="p">(</span><span class="nv">$_POST</span><span class="p">);</span>
+            <span class="nv">$log</span> <span class="o">=</span> <span class="nb">date</span><span class="p">(</span><span class="s1">'Y-m-d H:i:s'</span><span class="p">)</span> <span class="o">.</span> <span class="s2">"</span><span class="se">\t</span><span class="si">{</span><span class="nv">$res</span><span class="si">}</span><span class="se">\t</span><span class="si">{</span><span class="nv">$json</span><span class="si">}</span><span class="s2">"</span><span class="p">;</span>
+            <span class="nx">log_record</span><span class="p">(</span><span class="nx">self</span><span class="o">::</span><span class="na">DDB_CALL_BACK_LOG_UNION</span><span class="p">,</span> <span class="nv">$log</span><span class="p">);</span>
+
+            <span class="c1">// 0. 获取基本数据
+</span>            <span class="nv">$dspType</span>     <span class="o">=</span> <span class="nv">$_POST</span><span class="p">[</span><span class="s1">'dspType'</span><span class="p">]</span> <span class="o">?</span> <span class="o">:</span> <span class="s1">'yoyi'</span><span class="p">;</span>              <span class="c1"># DSP类型
+</span>            <span class="nv">$report</span>      <span class="o">=</span> <span class="nv">$_POST</span><span class="p">[</span><span class="s1">'report'</span><span class="p">];</span>                          <span class="c1"># 注意 report 中 cus 为 count(distinct imei)
+</span>            <span class="c1">// 0.1 其他参数
+</span>            <span class="nv">$date</span>        <span class="o">=</span> <span class="nv">$_POST</span><span class="p">[</span><span class="s1">'params'</span><span class="p">][</span><span class="s1">'date'</span><span class="p">];</span>                  <span class="c1"># 计算日期
+</span>            <span class="nv">$logStart</span>    <span class="o">=</span> <span class="nv">$_POST</span><span class="p">[</span><span class="s1">'params'</span><span class="p">][</span><span class="s1">'log_start'</span><span class="p">];</span>             <span class="c1"># 日志开始日期，一般为 date-180
+</span>            <span class="nv">$logEnd</span>      <span class="o">=</span> <span class="nv">$_POST</span><span class="p">[</span><span class="s1">'params'</span><span class="p">][</span><span class="s1">'log_end'</span><span class="p">];</span>               <span class="c1"># 日志结束日期，一般为 date
+</span>            <span class="nv">$streamStart</span> <span class="o">=</span> <span class="nv">$_POST</span><span class="p">[</span><span class="s1">'params'</span><span class="p">][</span><span class="s1">'stream_start'</span><span class="p">];</span>          <span class="c1"># 客流开始日期
+</span>            <span class="nv">$streamEnd</span>   <span class="o">=</span> <span class="nv">$_POST</span><span class="p">[</span><span class="s1">'params'</span><span class="p">][</span><span class="s1">'stream_end'</span><span class="p">];</span>            <span class="c1"># 客流结束日期
+</span>            <span class="c1">// TODO 来自高空的代码
+</span>            
+            <span class="nv">$file</span> <span class="o">=</span> <span class="nv">$_POST</span><span class="p">[</span><span class="s1">'log_file_url'</span><span class="p">];</span>
+            <span class="nv">$args</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="s1">'action'</span>  <span class="o">=&gt;</span> <span class="s1">'union-finish'</span><span class="p">,</span>
+                <span class="s1">'report'</span>  <span class="o">=&gt;</span> <span class="nv">$report</span><span class="p">,</span>
+                <span class="s1">'params'</span>  <span class="o">=&gt;</span> <span class="nv">$_POST</span><span class="p">[</span><span class="s1">'params'</span><span class="p">],</span>
+                <span class="s1">'dspType'</span> <span class="o">=&gt;</span> <span class="nv">$dspType</span><span class="p">,</span>
+                <span class="s1">'file'</span>    <span class="o">=&gt;</span> <span class="nv">$file</span><span class="p">,</span>
+            <span class="p">];</span>
+            <span class="nv">$job</span> <span class="o">=</span> <span class="s1">'\\Job\\Controller\\DaodianbaoJobController'</span><span class="p">;</span>
+            <span class="nv">$jobId</span> <span class="o">=</span> <span class="nx">\Resque</span><span class="o">::</span><span class="na">enqueue</span><span class="p">(</span><span class="s1">'default'</span><span class="p">,</span> <span class="nv">$job</span><span class="p">,</span> <span class="nv">$args</span><span class="p">,</span> <span class="kc">true</span><span class="p">);</span>
+            <span class="k">return</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">ajaxReturn</span><span class="p">([</span><span class="s1">'status'</span><span class="o">=&gt;</span><span class="mi">0</span><span class="p">,</span> <span class="s1">'msg'</span><span class="o">=&gt;</span><span class="s1">'ok'</span><span class="p">,</span> <span class="s1">'jog'</span><span class="o">=&gt;</span><span class="nv">$jobId</span><span class="p">]);</span>
+      <span class="p">}</span>
+  <span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li><strong>消费-控制器</strong></li>
+</ul>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">public</span> <span class="k">function</span> <span class="nf">perform</span><span class="p">()</span> <span class="p">{</span>
+        <span class="nv">$args</span> <span class="o">=</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">args</span><span class="p">;</span>
+        <span class="nv">$action</span> <span class="o">=</span> <span class="nv">$args</span><span class="p">[</span><span class="s1">'action'</span><span class="p">];</span>
+        <span class="nv">$rid</span>  <span class="o">=</span> <span class="nv">$args</span><span class="p">[</span><span class="s1">'rid'</span><span class="p">];</span>
+        <span class="nv">$adId</span> <span class="o">=</span> <span class="nv">$args</span><span class="p">[</span><span class="s1">'adId'</span><span class="p">];</span>
+        <span class="nv">$dateTime</span> <span class="o">=</span> <span class="nv">$args</span><span class="p">[</span><span class="s1">'dateTime'</span><span class="p">];</span>
+ 
+        <span class="k">switch</span><span class="p">(</span><span class="nv">$action</span><span class="p">){</span>
+            <span class="k">case</span> <span class="s1">'init'</span><span class="o">:</span>                                                                    <span class="c1"># 初始化随机日志任务 [1.随机日志 2.导出随机日志IMEI]
+</span>                <span class="nv">$mids</span> <span class="o">=</span> <span class="nv">$args</span><span class="p">[</span><span class="s1">'mids'</span><span class="p">];</span>
+                <span class="nv">$yoyiId</span> <span class="o">=</span> <span class="nv">$args</span><span class="p">[</span><span class="s1">'yoyiId'</span><span class="p">];</span>
+                <span class="nv">$from</span>   <span class="o">=</span> <span class="nv">$args</span><span class="p">[</span><span class="s1">'from'</span><span class="p">];</span>
+                <span class="nv">$to</span>     <span class="o">=</span> <span class="nv">$args</span><span class="p">[</span><span class="s1">'to'</span><span class="p">];</span>
+
+                <span class="nv">$_sendRes</span> <span class="o">=</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_exportMac</span><span class="p">(</span><span class="nv">$rid</span><span class="p">,</span> <span class="nv">$mids</span><span class="p">,</span> <span class="nv">$from</span><span class="p">,</span> <span class="nv">$to</span><span class="p">);</span>
+                <span class="c1"># 任务类型顾客来源cusori,受众MAC allviewer,受众轨迹randviewer
+</span>                <span class="c1"># 状态, 顾客来源(cusori):exmac-&gt;tobaidu-&gt;finish-&gt;download
+</span>                <span class="nv">$update</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'status'</span><span class="o">=&gt;</span><span class="s1">'exmac'</span><span class="p">,</span><span class="s1">'finish_at'</span><span class="o">=&gt;</span><span class="nv">$dateTime</span><span class="p">];</span>
+                <span class="nx">M</span><span class="p">(</span><span class="s1">'Jbb_report_task'</span><span class="p">)</span><span class="o">-&gt;</span><span class="na">where</span><span class="p">([</span><span class="s1">'r_id'</span><span class="o">=&gt;</span><span class="nv">$rid</span><span class="p">,</span> <span class="s1">'type'</span><span class="o">=&gt;</span><span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_taskType</span><span class="p">])</span><span class="o">-&gt;</span><span class="na">setField</span><span class="p">(</span><span class="nv">$update</span><span class="p">);</span>
+              <span class="k">break</span><span class="p">;</span>
+            <span class="k">case</span> <span class="s1">'tobaidu'</span><span class="o">:</span>                                                                 <span class="c1"># 发送给旭远
+</span>                <span class="nv">$project</span> <span class="o">=</span> <span class="nv">$args</span><span class="p">[</span><span class="s1">'project'</span><span class="p">];</span>
+                <span class="nv">$table</span>   <span class="o">=</span> <span class="nv">$args</span><span class="p">[</span><span class="s1">'table'</span><span class="p">];</span>
+                <span class="nv">$line</span>    <span class="o">=</span> <span class="nv">$args</span><span class="p">[</span><span class="s1">'line'</span><span class="p">];</span>
+                <span class="nv">$_sendRes</span> <span class="o">=</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_sendToBaidu</span><span class="p">(</span><span class="nv">$rid</span><span class="p">,</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_taskType</span><span class="p">,</span> <span class="nv">$project</span><span class="p">,</span> <span class="nv">$table</span><span class="p">);</span>
+                
+                <span class="c1"># 将project 和 table 更新 # 状态, 受众分析(allviewer):exdid-&gt;exmac-&gt;tobaidu-&gt;finish-&gt;download
+</span>                <span class="nv">$update</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'project'</span><span class="o">=&gt;</span><span class="nv">$project</span><span class="p">,</span> <span class="s1">'table'</span><span class="o">=&gt;</span><span class="nv">$table</span><span class="p">,</span><span class="s1">'status'</span><span class="o">=&gt;</span><span class="s1">'tobaidu'</span><span class="p">,</span> <span class="s1">'finish_at'</span><span class="o">=&gt;</span><span class="nv">$dateTime</span><span class="p">,</span><span class="s1">'line'</span><span class="o">=&gt;</span><span class="nv">$line</span><span class="p">];</span>
+                <span class="nx">M</span><span class="p">(</span><span class="s1">'Jbb_report_task'</span><span class="p">)</span><span class="o">-&gt;</span><span class="na">where</span><span class="p">([</span><span class="s1">'r_id'</span><span class="o">=&gt;</span><span class="nv">$rid</span><span class="p">,</span> <span class="s1">'type'</span><span class="o">=&gt;</span><span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_taskType</span><span class="p">])</span><span class="o">-&gt;</span><span class="na">setField</span><span class="p">(</span><span class="nv">$update</span><span class="p">);</span>
+     
+              <span class="k">break</span><span class="p">;</span>
+            <span class="k">case</span> <span class="s1">'finish'</span><span class="o">:</span>
+                <span class="nv">$bdUname</span> <span class="o">=</span> <span class="nv">$args</span><span class="p">[</span><span class="s1">'username'</span><span class="p">];</span>
+                <span class="nv">$bdPass</span>  <span class="o">=</span> <span class="nv">$args</span><span class="p">[</span><span class="s1">'password'</span><span class="p">];</span>
+                <span class="nv">$bdDate</span>  <span class="o">=</span> <span class="nv">$args</span><span class="p">[</span><span class="s1">'date'</span><span class="p">];</span>
+
+                <span class="k">if</span><span class="p">(</span><span class="nv">$bdUname</span> <span class="o">&amp;&amp;</span> <span class="nv">$bdPass</span> <span class="o">&amp;&amp;</span> <span class="nv">$bdDate</span><span class="p">){</span>
+                    <span class="nv">$bdPass</span>  <span class="o">=</span> <span class="nx">authcode</span><span class="p">(</span><span class="nv">$bdPass</span><span class="p">,</span> <span class="s1">'ENCODE'</span><span class="p">,</span> <span class="nx">C</span><span class="p">(</span><span class="s1">'DMP_BAIDU_PASS_HASH_KEY'</span><span class="p">));</span>
+                    <span class="nv">$update</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'bd_uname'</span><span class="o">=&gt;</span><span class="nv">$bdUname</span><span class="p">,</span> <span class="s1">'bd_pass'</span><span class="o">=&gt;</span><span class="nv">$bdPass</span><span class="p">,</span> <span class="s1">'bd_date'</span><span class="o">=&gt;</span><span class="nv">$bdDate</span><span class="p">,</span><span class="s1">'finish_at'</span><span class="o">=&gt;</span><span class="nv">$dateTime</span><span class="p">,</span><span class="s1">'status'</span><span class="o">=&gt;</span><span class="s1">'finish'</span><span class="p">];</span>
+                    <span class="nx">M</span><span class="p">(</span><span class="s1">'Jbb_report_task'</span><span class="p">)</span><span class="o">-&gt;</span><span class="na">where</span><span class="p">([</span><span class="s1">'r_id'</span><span class="o">=&gt;</span><span class="nv">$rid</span><span class="p">,</span> <span class="s1">'type'</span><span class="o">=&gt;</span><span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_taskType</span><span class="p">])</span><span class="o">-&gt;</span><span class="na">setField</span><span class="p">(</span><span class="nv">$update</span><span class="p">);</span>
+                <span class="p">}</span>
+              <span class="k">break</span><span class="p">;</span>
+            <span class="k">case</span> <span class="s1">'download'</span><span class="o">:</span>
+                <span class="k">break</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+</code></pre></div></div>
+
+    </article>
+    
+    <div class="social-share-wrapper">
+        <div class="social-share"></div>
+    </div>
+    
+</div>
+
+<section class="author-detail">
+    <section class="post-footer-item author-card">
+        <div class="avatar">
+            <img src="http://localhost:4000/assets/img/profile.png" alt="">
+        </div>
+        <div class="author-name" rel="author">gojson</div>
+        <div class="bio">
+            <p>PHP开发者,热爱技术,分享知识,共同成长</p>
+        </div>
+        
+        <ul class="sns-links">
+            
+            <li>
+                <a href="//weibo.com/u/1008277207/home?topnav=1&wvr=6" target="_blank">
+                    <i class="iconfont icon-weibo"></i>
+                </a>
+            </li>
+            
+            <li>
+                <a href="//juejin.im/user/57a6f434165abd006159b4cc" target="_blank">
+                    <i class="iconfont icon-juejin"></i>
+                </a>
+            </li>
+            
+            <li>
+                <a href="//github.com/gojson" target="_blank">
+                    <i class="iconfont icon-github"></i>
+                </a>
+            </li>
+            
+        </ul>
+        
+    </section>
+    <section class="post-footer-item read-next">
+        
+        
+        <div class="read-next-item">
+            <a href="/php/2017/12/07/rabbitmq.html" class="read-next-link"></a>
+            <section>
+                <span>rabbitmq消息队列</span>
+                <p>1.0 情景描述:处理消息队列,rabbitmq.</p>
+            </section>
+            
+            <div class="filter"></div>
+            <img src="http://on2171g4d.bkt.clouddn.com/jekyll-theme-h2o-postcover.jpg" alt="">
+            
+        </div>
+        
+    </section>
+    
+</section>
+
+<footer class="g-footer">
+    <section>goJson的独立博客 © 2017</section>
+    <section>Powered by <a href="//gojson.cn">Json</a> | <a href="https://github.com/gojson">H20</a></section>
+</footer>
+
+
+<!--
+<script src="/assets/js/social-share.min.js"></script>
+
+<script>
+   socialShare('.social-share', {
+        sites: ['wechat','weibo','douban','twitter'],
+        wechatQrcodeTitle: "分享到微信朋友圈",
+        wechatQrcodeHelper: '<p>扫码后点击右上角</p><p>将本文分享至朋友圈</p>'
+    });
+</script>
+-->
+<script>
+
+/**
+*  RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
+*  LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables*/
+/*
+var disqus_config = function () {
+this.page.url = PAGE_URL;  // Replace PAGE_URL with your page's canonical URL variable
+this.page.identifier = PAGE_IDENTIFIER; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+};
+*/
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+/*写入自己的disqus信息*/
+s.src = 'https://liaokeyu.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<script src="https://cdn.staticfile.org/jquery/3.2.1/jquery.min.js"></script>
+<script src="/assets/js/prism.js"></script>
+<script src="/assets/js/index.min.js"></script>
+</body>
+</html>

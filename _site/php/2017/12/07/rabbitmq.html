@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>rabbitmq消息队列 - goJson的独立博客</title>
+    <meta name="author"  content="gojson">
+    <meta name="description" content="rabbitmq消息队列">
+    <meta name="keywords"  content="php">
+    <!-- Open Graph -->
+    <meta property="og:title" content="rabbitmq消息队列 - goJson的独立博客">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="http://localhost:4000/php/2017/12/07/rabbitmq.html">
+    <meta property="og:description" content="gojson record my life with you,record my simple IT level。">
+    <meta property="og:site_name" content="goJson的独立博客">
+    <link rel="stylesheet" href="//cdn.staticfile.org/normalize/6.0.0/normalize.min.css">
+    <link rel="stylesheet" href="//at.alicdn.com/t/font_roc50gemkxpw4s4i.css">
+    <link rel="stylesheet" href="/assets/css/github-markdown.css">
+    <link rel="stylesheet" href="/assets/css/prism.css">
+    <link rel="stylesheet" href="/assets/css/share.min.css">
+    <link rel="stylesheet" href="/assets/css/app.min.css">
+</head>
+<body>
+    <!--[if lt IE 10]>
+<div class="alert-danger" role="alert">你的浏览器实在太太太旧了，放学别走，升级完浏览器再说！<a target="_blank" class="alert-link" href="http://browsehappy.com">立即升级</a></div>
+<![endif]-->
+<input id="nm-switch" type="hidden" value="true">
+
+<header class="g-header">
+    <div class="g-logo">
+      <a href="/"></a>
+    </div>
+    <i id="menu-toggle" class="iconfont icon-menu"></i>
+    <nav class="g-nav">
+        <ul>
+            
+            <li><a href="/">home</a></li>
+            
+            <li><a href="/tags.html">tags</a></li>
+            
+        </ul>
+    </nav>
+</header>
+
+
+<header class="g-banner post-header post-pattern-circuitBoard bgcolor-default " data-theme="default">
+    <div class="post-wrapper">
+        <div class="post-tags">
+            
+            
+            <a href="http://localhost:4000/tags#php" class="post-tag">php</a>
+            
+            
+        </div>
+        <h1>rabbitmq消息队列</h1>
+        <div class="post-meta">
+            <span class="post-meta-item"><i class="iconfont icon-author"></i><a href="http://localhost:4000" target="_blank" rel="author">gojson</a></></span>
+            <time class="post-meta-item" datetime="17-12-07"><i class="iconfont icon-date"></i>07 Dec 2017</time>
+        </div>
+    </div>
+    
+    <div class="filter"></div>
+    <div class="post-cover" style="background: url('http://on2171g4d.bkt.clouddn.com/jekyll-theme-h2o-postcover.jpg') center no-repeat; background-size: cover;">
+    
+</header>
+
+<div class="post-content">
+    
+    <h2 class="post-subtitle">php 使用 rabbitmq</h2>
+    
+    <article class="markdown-body">
+        <h2 id="10-情景描述">1.0 情景描述:</h2>
+<p>处理消息队列,rabbitmq.</p>
+
+<h2 id="20-官网地址">2.0 官网地址</h2>
+<ul>
+  <li><a href="http://www.rabbitmq.com/install-homebrew.html">官网安装文档地址</a></li>
+  <li><strong>安装步骤:</strong>
+    <ol>
+      <li>brew update</li>
+      <li>brew install rabbitmq             //安装</li>
+      <li>vim ~/.zshrc</li>
+      <li>PATH=$PATH:/usr/local/sbin        //加入环境变量</li>
+      <li>rabbitmq-server                   //启动服务</li>
+      <li>rabbitmqctl status                //查看运行状态</li>
+      <li>rabbitmqctl stop                  //关闭服务</li>
+      <li>sudo rabbitmqctl list_queues      //查看队列消息</li>
+    </ol>
+  </li>
+  <li><strong>注意:</strong>
+    <ol>
+      <li>RabbitMQ安装可能需要调整系统限制和内核参数，以便处理体面的并发连接和队列。需要调整的主要设置是打开文件的最大数量，也称为ulimit -n。许多操作系统的默认值对于消息传递代理来说太低（例如，在几个Linux发行版上是1024）。我们建议在生产环境中为用户rabbitmq至少允许65536个文件描述符。4096对于大多数开发工作量来说应该是足够的。</li>
+      <li>有两个限制：操作系统内核允许的最大打开文件数（kern.maxfilesperproc）和每用户限制（ulimit -n）。前者必高于后者。</li>
+      <li>在前台启动RabbitMQ之前 调用ulimit -S -n 4096</li>
+    </ol>
+  </li>
+  <li><strong>客户端管理工具：在项目的composer.json 添加：</strong></li>
+</ul>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="p">{</span>
+     <span class="s2">"require"</span><span class="o">:</span> <span class="p">{</span>
+             <span class="s2">"php-amqplib/php-amqplib"</span><span class="o">:</span> <span class="s2">"&gt;=2.6.1"</span>
+      <span class="p">}</span>
+ <span class="p">}</span>
+</code></pre></div></div>
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="nx">composer</span><span class="o">.</span><span class="nx">phar</span> <span class="nx">install</span>        <span class="c1">//安装客户端所需类
+</span></code></pre></div></div>
+<ul>
+  <li><strong>发送请求send.php</strong></li>
+</ul>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code>	<span class="k">require_once</span> <span class="nx">__DIR__</span> <span class="o">.</span> <span class="s1">'/vendor/autoload.php'</span><span class="p">;</span>
+	<span class="k">use</span> <span class="nx">PhpAmqpLib\Connection\AMQPStreamConnection</span><span class="p">;</span>
+	<span class="k">use</span> <span class="nx">PhpAmqpLib\Message\AMQPMessage</span><span class="p">;</span>
+
+	<span class="k">public</span> <span class="k">function</span> <span class="nf">sendMessage</span><span class="p">(){</span>
+		<span class="nv">$connection</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">AMQPStreamConnection</span><span class="p">(</span><span class="s1">'localhost'</span><span class="p">,</span> <span class="mi">5672</span><span class="p">,</span> <span class="s1">'guest'</span><span class="p">,</span> <span class="s1">'guest'</span><span class="p">);</span>
+		<span class="nv">$channel</span> <span class="o">=</span> <span class="nv">$connection</span><span class="o">-&gt;</span><span class="na">channel</span><span class="p">();</span>
+		<span class="nv">$channel</span><span class="o">-&gt;</span><span class="na">queue_declare</span><span class="p">(</span><span class="s1">'hello'</span><span class="p">,</span> <span class="kc">false</span><span class="p">,</span> <span class="kc">false</span><span class="p">,</span> <span class="kc">false</span><span class="p">,</span> <span class="kc">false</span><span class="p">);</span>
+		<span class="nv">$msg</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">AMQPMessage</span><span class="p">(</span><span class="s1">'Hello World!'</span><span class="p">);</span>
+		<span class="nv">$channel</span><span class="o">-&gt;</span><span class="na">basic_publish</span><span class="p">(</span><span class="nv">$msg</span><span class="p">,</span> <span class="s1">''</span><span class="p">,</span> <span class="s1">'hello'</span><span class="p">);</span>
+		<span class="k">echo</span> <span class="s2">" [x] Sent 'Hello World!'</span><span class="se">\n</span><span class="s2">"</span><span class="p">;</span>
+		<span class="nv">$channel</span><span class="o">-&gt;</span><span class="na">close</span><span class="p">();</span>
+		<span class="nv">$connection</span><span class="o">-&gt;</span><span class="na">close</span><span class="p">();</span>
+	<span class="p">}</span>
+	
+</code></pre></div></div>
+<ul>
+  <li><strong>Laravel使用实例</strong>
+    <ol>
+      <li>kernel.php 创建CLI命令</li>
+    </ol>
+  </li>
+</ul>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+
+<span class="k">namespace</span> <span class="nx">App\Console</span><span class="p">;</span>
+
+<span class="k">use</span> <span class="nx">Illuminate\Console\Scheduling\Schedule</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">Illuminate\Foundation\Console\Kernel</span> <span class="k">as</span> <span class="nx">ConsoleKernel</span><span class="p">;</span>
+
+<span class="k">class</span> <span class="nc">Kernel</span> <span class="k">extends</span> <span class="nx">ConsoleKernel</span>
+<span class="p">{</span>
+    <span class="sd">/**
+     * The Artisan commands provided by your application.
+     *
+     * @var array
+     */</span>
+    <span class="k">protected</span> <span class="nv">$commands</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="nx">Commands\getMacList</span><span class="o">::</span><span class="na">class</span><span class="p">,</span>   <span class="c1">//实时拉去任务
+</span>        <span class="nx">Commands\getMacPerDay</span><span class="o">::</span><span class="na">class</span><span class="p">,</span> <span class="c1">//每日拉取一次任务
+</span>        <span class="nx">Commands\Test</span><span class="o">::</span><span class="na">class</span><span class="p">,</span>
+    <span class="p">];</span>
+
+    <span class="sd">/**
+     * Define the application's command schedule.
+     *
+     * @param  \Illuminate\Console\Scheduling\Schedule  $schedule
+     * @return void
+     */</span>
+    <span class="k">protected</span> <span class="k">function</span> <span class="nf">schedule</span><span class="p">(</span><span class="nx">Schedule</span> <span class="nv">$schedule</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="nv">$schedule</span><span class="o">-&gt;</span><span class="na">command</span><span class="p">(</span><span class="s1">'Commands\getMacList'</span><span class="p">)</span>
+                 <span class="o">-&gt;</span><span class="na">hourly</span><span class="p">();</span>
+        <span class="nv">$dailyAt</span> <span class="o">=</span> <span class="s1">'00:01'</span><span class="p">;</span>
+        <span class="nv">$schedule</span><span class="o">-&gt;</span><span class="na">command</span><span class="p">(</span><span class="s1">'Commands\getMacPerDay'</span><span class="p">)</span>
+                 <span class="o">-&gt;</span><span class="na">dailyAt</span><span class="p">(</span><span class="nv">$dailyAt</span><span class="p">);</span>
+                 
+    <span class="p">}</span>
+
+    <span class="sd">/**
+     * Register the Closure based commands for the application.
+     *
+     * @return void
+     */</span>
+    <span class="k">protected</span> <span class="k">function</span> <span class="nf">commands</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="k">require</span> <span class="nx">base_path</span><span class="p">(</span><span class="s1">'routes/console.php'</span><span class="p">);</span>
+    <span class="p">}</span>
+ <span class="p">}</span>
+
+</code></pre></div></div>
+<ol>
+  <li>生成Command 任务调度</li>
+</ol>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">//命令行 执行
+</span><span class="nx">php</span> <span class="nx">artisan</span> <span class="nx">make</span><span class="o">:</span><span class="nx">command</span> <span class="nx">SendEmails</span>
+</code></pre></div></div>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+
+<span class="k">namespace</span> <span class="nx">App\Console\Commands</span><span class="p">;</span>
+
+<span class="k">use</span> <span class="nx">Illuminate\Console\Command</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">App\Http\Model\Mac</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">PhpAmqpLib\Connection\AMQPStreamConnection</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">DB</span><span class="p">;</span>
+
+<span class="c1">#实时mac队列任务处理
+</span>
+<span class="k">class</span> <span class="nc">getMacList</span> <span class="k">extends</span> <span class="nx">Command</span>
+<span class="p">{</span>
+    <span class="sd">/**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */</span>
+    <span class="k">protected</span> <span class="nv">$signature</span> <span class="o">=</span> <span class="s1">'pull:mac {date?} {--queue=zhanggui_online}'</span><span class="p">;</span>
+
+    <span class="sd">/**
+     * The console command description.
+     *
+     * @var string
+     */</span>
+    <span class="k">protected</span> <span class="nv">$description</span> <span class="o">=</span> <span class="s1">'getMacList describe'</span><span class="p">;</span>
+
+    <span class="k">const</span> <span class="no">DDB_YINPENG_MQ_EXCHANGE</span> <span class="o">=</span> <span class="s1">'****'</span><span class="p">;</span>                          <span class="c1"># exchange
+</span>    <span class="k">const</span> <span class="no">DDB_YINPENG_MQ_TOPIC</span>    <span class="o">=</span> <span class="s1">'****'</span><span class="p">;</span>                  <span class="c1"># topic
+</span>    <span class="k">const</span> <span class="no">DDB_YINPENG_MQ_QUEUE</span>    <span class="o">=</span> <span class="s1">'****'</span><span class="p">;</span>           <span class="c1"># queue_name_prefix  消息队列前缀,结合 
+</span>    
+
+    <span class="k">const</span> <span class="no">DDB_YINPENG_MQ_HOST</span>     <span class="o">=</span> <span class="s1">'****'</span><span class="p">;</span>
+    
+    <span class="k">const</span> <span class="no">DDB_YINPENG_MQ_PORT</span>     <span class="o">=</span> <span class="o">****</span><span class="p">;</span>                              <span class="c1"># 队列 port
+</span>    <span class="k">const</span> <span class="no">DDB_YINPENG_MQ_USER</span>     <span class="o">=</span> <span class="s1">'****'</span><span class="p">;</span>                          <span class="c1"># 队列用户
+</span>    <span class="k">const</span> <span class="no">DDB_YINPENG_MQ_PASS</span>     <span class="o">=</span> <span class="s1">'****'</span><span class="p">;</span>                         <span class="c1"># 队列pass
+</span>
+     <span class="c1">// 3. 设备列表刷新时间周期，默认 10 分钟 600s 
+</span>    <span class="k">const</span> <span class="no">ROUTER_LIST_UPDATE_TIME</span> <span class="o">=</span> <span class="mi">600</span><span class="p">;</span>                               <span class="c1"># 废弃
+</span>    <span class="c1">// 4. 最大执行时间，设置为1小时，每个一小时退出由定时任务启动
+</span>    <span class="k">const</span> <span class="no">MAX_EXCUTE_TIME</span> <span class="o">=</span> <span class="mi">3600</span><span class="p">;</span>
+    <span class="c1">// 5. 数据提交的条数限制
+</span>    <span class="k">const</span> <span class="no">DATA_SUBMIT_NUM</span> <span class="o">=</span> <span class="mi">10</span><span class="p">;</span>   
+
+    <span class="k">const</span> <span class="no">NOW_TIME_MAC_TABLE_PREFIX</span> <span class="o">=</span> <span class="s1">'now_time_mac_'</span><span class="p">;</span>     <span class="c1">#实时mac数据表前缀
+</span>
+    <span class="c1">#初始化数据表
+</span>    <span class="k">protected</span> <span class="nv">$_tableName</span> <span class="o">=</span> <span class="s1">''</span><span class="p">;</span>
+
+    <span class="c1">#请求mid地址API
+</span>    <span class="k">protected</span> <span class="nv">$_zmMpApi</span> <span class="o">=</span> <span class="s1">''</span><span class="p">;</span>
+
+    <span class="c1">#设置设备列表
+</span>    <span class="k">protected</span> <span class="nv">$_routerList</span> <span class="o">=</span> <span class="s1">''</span><span class="p">;</span>
+    <span class="c1">#设置设备列表最后更新时间
+</span>    <span class="k">protected</span> <span class="nv">$_routerListLastTime</span> <span class="o">=</span> <span class="s1">''</span><span class="p">;</span>
+
+    <span class="sd">/**
+     * Create a new command instance.
+     *
+     * @return void
+     */</span>
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">__construct</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="k">parent</span><span class="o">::</span><span class="na">__construct</span><span class="p">();</span>
+        <span class="c1">#绑定订阅队列
+</span>        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_MQName</span> <span class="o">=</span> <span class="s1">'zhanggui_online'</span><span class="p">;</span>
+        <span class="c1">#设置脚本启动时间,当前启动时间戳
+</span>        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_startTime</span> <span class="o">=</span> <span class="nb">time</span><span class="p">();</span>
+        <span class="c1">#获取下一小时时间戳
+</span>        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_nextHourTime</span> <span class="o">=</span> <span class="nb">strtotime</span><span class="p">(</span><span class="nb">date</span><span class="p">(</span><span class="s1">'YmdH'</span><span class="p">)</span> <span class="o">.</span> <span class="s1">'0000'</span><span class="p">)</span> <span class="o">+</span> <span class="mi">3600</span><span class="p">;</span>
+        <span class="c1">#初始化table
+</span>        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_initTableAndTime</span><span class="p">();</span> 
+        <span class="c1">#初始化路由列表
+</span>        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_initRouterList</span><span class="p">();</span>
+        
+    <span class="p">}</span>
+
+    <span class="sd">/**
+     * Execute the console command.
+     *
+     * @return mixed
+     */</span>
+    
+    <span class="c1">#命令行调用：php artisan pull:mac 2017-11-14 --queue=zhanggui_dev
+</span>    <span class="k">public</span> <span class="k">function</span> <span class="nf">handle</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="c1">// $date = $this-&gt;argument('date');
+</span>        <span class="c1">#主入口方法
+</span>        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_getMac</span><span class="p">();</span>
+
+    <span class="p">}</span>
+
+    <span class="c1">#拉取数据的主入口
+</span>    <span class="c1">#
+</span>    <span class="k">private</span> <span class="k">function</span> <span class="nf">_getMac</span><span class="p">(){</span>
+        <span class="nv">$connection</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">AMQPStreamConnection</span><span class="p">(</span><span class="nx">self</span><span class="o">::</span><span class="na">DDB_YINPENG_MQ_HOST</span><span class="p">,</span> <span class="nx">self</span><span class="o">::</span><span class="na">DDB_YINPENG_MQ_PORT</span><span class="p">,</span> <span class="nx">self</span><span class="o">::</span><span class="na">DDB_YINPENG_MQ_USER</span><span class="p">,</span> <span class="nx">self</span><span class="o">::</span><span class="na">DDB_YINPENG_MQ_PASS</span><span class="p">);</span>
+        <span class="nv">$channel</span> <span class="o">=</span> <span class="nv">$connection</span><span class="o">-&gt;</span><span class="na">channel</span><span class="p">();</span>
+        <span class="c1">// 3. 绑定队列, 最后一个参数 true自动删除 false 不自动删除, 默认自动删除，上线后改为不自动删除
+</span>        <span class="nv">$autoDelete</span> <span class="o">=</span> <span class="kc">false</span><span class="p">;</span>
+        <span class="k">list</span><span class="p">(</span><span class="nv">$queue_name</span><span class="p">,</span> <span class="p">,)</span> <span class="o">=</span> <span class="nv">$channel</span><span class="o">-&gt;</span><span class="na">queue_declare</span><span class="p">(</span><span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_MQName</span><span class="p">,</span> <span class="kc">false</span><span class="p">,</span> <span class="kc">true</span><span class="p">,</span> <span class="kc">false</span><span class="p">,</span> <span class="nv">$autoDelete</span><span class="p">);</span>
+        <span class="nv">$channel</span><span class="o">-&gt;</span><span class="na">queue_bind</span><span class="p">(</span><span class="nv">$queue_name</span><span class="p">,</span> <span class="nx">self</span><span class="o">::</span><span class="na">DDB_YINPENG_MQ_EXCHANGE</span><span class="p">,</span> <span class="nx">self</span><span class="o">::</span><span class="na">DDB_YINPENG_MQ_TOPIC</span><span class="p">);</span>
+        <span class="c1">// 3.1 绑定回调事件，主要的数据处理逻辑都在这里，事件处理逻辑在while里，即5中
+</span>        <span class="c1"># $channel-&gt;basic_consume($queue_name, '', false, true, false, true, function($msg){
+</span>        <span class="nv">$channel</span><span class="o">-&gt;</span><span class="na">basic_consume</span><span class="p">(</span><span class="nv">$queue_name</span><span class="p">,</span> <span class="s1">''</span><span class="p">,</span> <span class="kc">false</span><span class="p">,</span> <span class="kc">true</span><span class="p">,</span> <span class="kc">false</span><span class="p">,</span> <span class="kc">false</span><span class="p">,</span> <span class="k">function</span><span class="p">(</span><span class="nv">$msg</span><span class="p">){</span>
+            <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_callback</span><span class="p">(</span><span class="nv">$msg</span><span class="p">);</span>
+            <span class="nv">$msg</span> <span class="o">=</span> <span class="kc">null</span><span class="p">;</span><span class="nb">unset</span><span class="p">(</span><span class="nv">$msg</span><span class="p">);</span>
+        <span class="p">});</span>
+        <span class="c1">// 4. 绑定退出事件
+</span>        <span class="nv">$shutdown</span> <span class="o">=</span> <span class="k">function</span><span class="p">(</span><span class="nv">$channel</span><span class="p">,</span> <span class="nv">$connection</span><span class="p">){</span>
+            <span class="c1">// 4.1 关闭队列连接
+</span>            <span class="nv">$channel</span><span class="o">-&gt;</span><span class="na">close</span><span class="p">();</span>
+            <span class="nv">$connection</span><span class="o">-&gt;</span><span class="na">close</span><span class="p">();</span>
+            <span class="c1">// 4.2 提交剩余数据
+</span>            <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_saveData</span><span class="p">();</span>
+        <span class="p">};</span>
+
+        <span class="nb">register_shutdown_function</span><span class="p">(</span><span class="nv">$shutdown</span><span class="p">,</span> <span class="nv">$channel</span><span class="p">,</span> <span class="nv">$connection</span><span class="p">);</span>
+        <span class="c1">// die;
+</span>        <span class="c1">// 5. 跑起来
+</span>        <span class="k">while</span><span class="p">(</span> <span class="nb">count</span><span class="p">(</span><span class="nv">$channel</span><span class="o">-&gt;</span><span class="na">callbacks</span><span class="p">)</span> <span class="p">){</span>
+            <span class="c1">#5.0 a.每隔一小时 或 b.到下一个定时任务周期 脚本自动退出
+</span>            <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_checkTimeAndExit</span><span class="p">();</span>
+            <span class="c1">#5.1 检查时间，每两小时刷新一次设备列表, 最大执行时间为1小时
+</span>            <span class="k">if</span><span class="p">(</span> <span class="p">(</span><span class="nb">time</span><span class="p">()</span> <span class="o">-</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_routerListLastTime</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="nx">self</span><span class="o">::</span><span class="na">ROUTER_LIST_UPDATE_TIME</span> <span class="p">){</span>
+                <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_initRouterList</span><span class="p">();</span>
+            <span class="p">}</span>
+            <span class="c1">#5.1 检查时间，如果超过今天则切换时间
+</span>            <span class="k">if</span><span class="p">(</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_tomoDateTime</span> <span class="o">&lt;=</span> <span class="nb">time</span><span class="p">()</span> <span class="p">){</span>
+                <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_initTableAndTime</span><span class="p">();</span>
+            <span class="p">}</span>
+            <span class="c1">#5.2 设置最大超市时间为1小时
+</span>            <span class="nv">$channel</span><span class="o">-&gt;</span><span class="na">wait</span><span class="p">(</span><span class="kc">null</span><span class="p">,</span> <span class="kc">false</span><span class="p">,</span> <span class="nx">self</span><span class="o">::</span><span class="na">MAX_EXCUTE_TIME</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="sd">/**
+     * 超时检查退出方法, 检查脚本执行时间是否超过1小时火者到下一个周期
+     * @param null
+     * */</span>
+    <span class="k">private</span> <span class="k">function</span> <span class="nf">_checkTimeAndExit</span><span class="p">(){</span>
+        <span class="c1">// 1. 当前时间
+</span>        <span class="nv">$nowTime</span> <span class="o">=</span> <span class="nb">time</span><span class="p">();</span>
+        <span class="c1">// 2. 判断是否超过1小时
+</span>        <span class="nv">$a</span> <span class="o">=</span> <span class="p">(</span> <span class="nv">$nowTime</span><span class="o">-</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_startTime</span> <span class="p">)</span> <span class="o">&gt;=</span> <span class="nx">self</span><span class="o">::</span><span class="na">MAX_EXCUTE_TIME</span><span class="p">;</span>
+        <span class="c1">// 3. 判断是否到下个周期
+</span>        <span class="nv">$b</span> <span class="o">=</span> <span class="nv">$nowTime</span> <span class="o">&gt;=</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_nextHourTime</span><span class="p">;</span>
+        <span class="c1">// 4. 获取内存
+</span>        <span class="k">if</span><span class="p">(</span><span class="nv">$a</span> <span class="o">||</span> <span class="nv">$b</span><span class="p">){</span>
+            <span class="c1">// $mem = G('REAL_TIME_PASS_FLOW_START', 'REAL_TIME_PASS_FLOW_END', 'm') . 'kb';
+</span>            <span class="nv">$msg</span> <span class="o">=</span> <span class="nb">date</span><span class="p">(</span><span class="s1">'Y-m-d H:i:s'</span><span class="p">)</span> <span class="o">.</span> <span class="s2">"</span><span class="se">\t</span><span class="s2">"</span> <span class="o">.</span> <span class="p">(</span><span class="nv">$a</span> <span class="o">?</span> <span class="s1">'one hour '</span> <span class="o">:</span> <span class="s1">''</span><span class="p">)</span> <span class="o">.</span> <span class="p">(</span><span class="nv">$b</span><span class="o">?</span><span class="s1">'next period '</span> <span class="o">:</span> <span class="s1">''</span><span class="p">)</span> <span class="o">.</span> <span class="s2">"</span><span class="se">\t</span><span class="s2">start:</span><span class="si">{</span><span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_startTime</span><span class="si">}</span><span class="se">\t</span><span class="s2">end:</span><span class="si">{</span><span class="nv">$nowTime</span><span class="si">}</span><span class="s2">"</span> <span class="o">.</span><span class="nx">PHP_EOL</span><span class="p">;</span> 
+            <span class="k">exit</span><span class="p">(</span><span class="nv">$msg</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+
+    <span class="k">private</span> <span class="k">function</span> <span class="nf">_callback</span><span class="p">(</span> <span class="nv">$msg</span> <span class="p">){</span>
+      <span class="nv">$arr</span> <span class="o">=</span> <span class="nb">json_decode</span><span class="p">(</span><span class="nv">$msg</span><span class="o">-&gt;</span><span class="na">body</span><span class="p">,</span><span class="kc">true</span><span class="p">);</span>
+      <span class="c1">// $this-&gt;dd($arr);die;
+</span>      <span class="c1">// echo "&lt;pre&gt;";
+</span>      <span class="c1">// var_dump($arr);
+</span>      <span class="nv">$time</span>     <span class="o">=</span> <span class="nv">$arr</span><span class="p">[</span><span class="s1">'time'</span><span class="p">];</span>              <span class="c1"># 上报时间 
+</span>      <span class="nv">$srcIp</span>    <span class="o">=</span> <span class="nb">isset</span><span class="p">(</span><span class="nv">$arr</span><span class="p">[</span><span class="s1">'src_ip'</span><span class="p">])</span><span class="o">?</span><span class="nv">$arr</span><span class="p">[</span><span class="s1">'src_ip'</span><span class="p">]</span><span class="o">:</span><span class="s1">''</span><span class="p">;</span>            <span class="c1"># 来源IP
+</span>      <span class="nv">$routerId</span> <span class="o">=</span> <span class="nv">$arr</span><span class="p">[</span><span class="s1">'device_id'</span><span class="p">];</span>         <span class="c1"># 设备ID,router_id
+</span>
+      <span class="nv">$mid</span>      <span class="o">=</span> <span class="nb">isset</span><span class="p">(</span><span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_routerList</span><span class="p">[</span><span class="nv">$routerId</span><span class="p">])</span> <span class="o">?</span><span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_routerList</span><span class="p">[</span><span class="nv">$routerId</span><span class="p">]</span> <span class="o">:</span> <span class="kc">null</span><span class="p">;</span>
+      <span class="c1">// 2. 处理数据 ，设备存在， 且在设备列表中，且设备有商家
+</span>      <span class="k">if</span><span class="p">(</span> <span class="nv">$routerId</span> <span class="o">&amp;&amp;</span> <span class="nb">isset</span><span class="p">(</span><span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_routerList</span><span class="p">[</span><span class="nv">$routerId</span><span class="p">])</span> <span class="o">&amp;&amp;</span> <span class="nv">$mid</span> <span class="p">){</span>
+          <span class="c1">// 2.1 循环处理数据
+</span>          <span class="k">foreach</span><span class="p">(</span><span class="nv">$arr</span><span class="p">[</span><span class="s1">'airstations'</span><span class="p">]</span> <span class="k">as</span> <span class="nv">$v</span><span class="p">){</span>
+              <span class="nv">$mac</span> <span class="o">=</span> <span class="nv">$v</span><span class="p">[</span><span class="s1">'mac'</span><span class="p">];</span>
+              <span class="nv">$sig</span> <span class="o">=</span> <span class="nv">$v</span><span class="p">[</span><span class="s1">'sig'</span><span class="p">];</span>
+              <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_dataList</span><span class="p">[]</span> <span class="o">=</span> <span class="p">[</span>
+                  <span class="s1">'mid'</span>       <span class="o">=&gt;</span> <span class="nv">$mid</span><span class="p">,</span> 
+                  <span class="s1">'time'</span>      <span class="o">=&gt;</span> <span class="nv">$time</span><span class="p">,</span>
+                  <span class="s1">'hour_time'</span> <span class="o">=&gt;</span> <span class="nb">date</span><span class="p">(</span><span class="s1">'H'</span><span class="p">,</span> <span class="nv">$time</span><span class="p">),</span>
+                  <span class="s1">'router_id'</span> <span class="o">=&gt;</span> <span class="nv">$routerId</span><span class="p">,</span>
+                  <span class="s1">'mac'</span>       <span class="o">=&gt;</span> <span class="nv">$mac</span><span class="p">,</span>
+                  <span class="s1">'sig'</span>       <span class="o">=&gt;</span> <span class="nv">$sig</span><span class="p">,</span>
+                  <span class="s1">'src_ip'</span>    <span class="o">=&gt;</span> <span class="nv">$srcIp</span><span class="p">,</span>
+                  <span class="s1">'from'</span>      <span class="o">=&gt;</span> <span class="nb">isset</span><span class="p">(</span><span class="nv">$v</span><span class="p">[</span><span class="s1">'from'</span><span class="p">])</span><span class="o">?</span><span class="nv">$v</span><span class="p">[</span><span class="s1">'from'</span><span class="p">]</span><span class="o">:</span><span class="s1">''</span><span class="p">,</span>
+                  <span class="s1">'type'</span>      <span class="o">=&gt;</span> <span class="nb">isset</span><span class="p">(</span><span class="nv">$v</span><span class="p">[</span><span class="s1">'type'</span><span class="p">])</span><span class="o">?</span><span class="nv">$v</span><span class="p">[</span><span class="s1">'type'</span><span class="p">]</span><span class="o">:</span><span class="s1">''</span><span class="p">,</span>
+              <span class="p">];</span>
+          <span class="p">}</span>
+          <span class="c1">// 2.3 添加数据 
+</span>          <span class="k">if</span><span class="p">(</span> <span class="nb">count</span><span class="p">(</span><span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_dataList</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="nx">self</span><span class="o">::</span><span class="na">DATA_SUBMIT_NUM</span> <span class="p">){</span>
+              <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_saveData</span><span class="p">();</span>
+          <span class="p">}</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="c1">#保存数据
+</span>    <span class="k">private</span> <span class="k">function</span> <span class="nf">_saveData</span><span class="p">(){</span>
+      <span class="k">if</span><span class="p">(</span> <span class="o">!</span><span class="k">empty</span><span class="p">(</span><span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_dataList</span><span class="p">)</span> <span class="p">){</span>
+        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_initTableAndTime</span><span class="p">();</span>
+        <span class="nx">DB</span><span class="o">::</span><span class="na">table</span><span class="p">(</span><span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_tableName</span><span class="p">)</span><span class="o">-&gt;</span><span class="na">insert</span><span class="p">(</span><span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_dataList</span><span class="p">);</span>
+        <span class="c1">#添加完清空数组
+</span>        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_dataList</span> <span class="o">=</span> <span class="p">[];</span>
+      <span class="p">}</span>
+      
+    <span class="p">}</span>
+
+    <span class="sd">/**
+     * 初始化日期和数据表
+     * @param  2017-11-15
+     * @return [type]     [description]
+     */</span>
+    <span class="k">private</span> <span class="k">function</span> <span class="nf">_initTableAndTime</span><span class="p">(){</span>
+      <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_tomoDate</span>  <span class="o">=</span> <span class="nb">date</span><span class="p">(</span><span class="s1">'Ymd'</span><span class="p">,</span> <span class="nb">strtotime</span><span class="p">(</span><span class="s1">'+1 day'</span><span class="p">));</span>       <span class="c1">#明天
+</span>      <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_tomoDateTime</span> <span class="o">=</span> <span class="nb">strtotime</span><span class="p">(</span><span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_tomoDate</span><span class="p">);</span>         <span class="c1">#明天0点时间戳
+</span>      
+      <span class="nv">$date</span> <span class="o">=</span> <span class="nb">date</span><span class="p">(</span><span class="s1">'Ymd'</span><span class="p">);</span>                                       
+      <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_tableName</span> <span class="o">=</span> <span class="nx">self</span><span class="o">::</span><span class="na">NOW_TIME_MAC_TABLE_PREFIX</span><span class="o">.</span><span class="nv">$date</span><span class="p">;</span>  <span class="c1">#初始化今日的数据表名称
+</span>      <span class="nv">$model</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mac</span><span class="p">();</span>
+      <span class="nv">$model</span><span class="o">-&gt;</span><span class="na">createTableNowTime</span><span class="p">(</span><span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_tableName</span><span class="p">);</span>
+    <span class="p">}</span>
+
+
+    <span class="sd">/**
+     * 初始化启动，初始化用用户设备列表即 [@router=&gt;@mid] 形式
+     * 设备来自于两部分 
+     *  1. 用户创建时候填写的设备
+     *  2. 用户对应的MID在淘金的设备ID列表
+     * @param $null
+     * */</span>
+    <span class="k">private</span> <span class="k">function</span> <span class="nf">_initRouterList</span><span class="p">(){</span>
+        <span class="c1">#2. 根据广告主商家mid获取其设备列表
+</span>        <span class="c1">#2.1 获取所有自有商家的Mid列表
+</span>        <span class="nv">$midList</span> <span class="o">=</span> <span class="nx">DB</span><span class="o">::</span><span class="na">table</span><span class="p">(</span><span class="s1">'users'</span><span class="p">)</span><span class="o">-&gt;</span><span class="na">pluck</span><span class="p">(</span><span class="s1">'mid'</span><span class="p">)</span><span class="o">-&gt;</span><span class="na">toArray</span><span class="p">();</span>
+        <span class="c1">#2.2 从淘金获取这些商家的设备列表  
+</span>        <span class="nv">$apiUrl</span> <span class="o">=</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_zmMpApi</span> <span class="o">.</span> <span class="s1">'getRidsByMids'</span><span class="p">;</span>
+        <span class="nv">$postJson</span> <span class="o">=</span> <span class="nb">json_encode</span><span class="p">([</span><span class="s1">'mids'</span><span class="o">=&gt;</span><span class="nv">$midList</span><span class="p">]</span> <span class="o">?</span> <span class="o">:</span> <span class="p">[]);</span>
+        <span class="nv">$resJson</span> <span class="o">=</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_curlRequest</span><span class="p">(</span><span class="nv">$apiUrl</span><span class="p">,</span> <span class="s1">'POST'</span><span class="p">,</span> <span class="nv">$postJson</span><span class="p">);</span>
+        <span class="nv">$resArr</span> <span class="o">=</span> <span class="nb">json_decode</span><span class="p">(</span><span class="nv">$resJson</span><span class="p">,</span> <span class="kc">true</span><span class="p">);</span>
+        <span class="nv">$routerList</span> <span class="o">=</span> <span class="p">(</span> <span class="nv">$resArr</span><span class="p">[</span><span class="s1">'status'</span><span class="p">]</span> <span class="o">===</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="nb">is_array</span><span class="p">(</span><span class="nv">$resArr</span><span class="p">[</span><span class="s1">'data'</span><span class="p">])</span> <span class="o">&amp;&amp;</span> <span class="nb">count</span><span class="p">(</span><span class="nv">$resArr</span><span class="p">[</span><span class="s1">'data'</span><span class="p">])</span> <span class="p">)</span> <span class="o">?</span> <span class="nv">$resArr</span><span class="p">[</span><span class="s1">'data'</span><span class="p">]</span> <span class="o">:</span> <span class="p">[];</span>
+        <span class="c1">// 4. 设置设备列表
+</span>        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_routerList</span> <span class="o">=</span> <span class="nv">$routerList</span><span class="p">;</span>
+        <span class="c1">// 5. 设置设备列表最后更新时间
+</span>        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_routerListLastTime</span> <span class="o">=</span> <span class="nb">time</span><span class="p">();</span>
+    <span class="p">}</span>
+
+
+    <span class="sd">/**
+     * curl方法
+     * @param $url 请求地址
+     * @param $method 请求方法，默认GET
+     * @param $data   请求的数据，默认为空
+     * @param $timeout 超时时间，默认30s
+     * */</span>
+    <span class="k">private</span> <span class="k">function</span> <span class="nf">_curlRequest</span><span class="p">(</span><span class="nv">$url</span><span class="p">,</span><span class="nv">$method</span><span class="o">=</span><span class="s1">'GET'</span><span class="p">,</span><span class="nv">$data</span><span class="o">=</span><span class="kc">null</span><span class="p">,</span><span class="nv">$timeout</span><span class="o">=</span><span class="mi">30</span><span class="p">){</span>
+  <span class="nv">$url</span> <span class="o">.=</span> <span class="s1">'?dd=10086'</span><span class="p">;</span>
+        <span class="nv">$curl</span> <span class="o">=</span> <span class="nb">curl_init</span><span class="p">();</span>
+        <span class="nb">curl_setopt</span><span class="p">(</span><span class="nv">$curl</span><span class="p">,</span> <span class="nx">CURLOPT_URL</span><span class="p">,</span> <span class="nv">$url</span><span class="p">);</span>
+        <span class="nb">curl_setopt</span><span class="p">(</span><span class="nv">$curl</span><span class="p">,</span> <span class="nx">CURLOPT_CUSTOMREQUEST</span><span class="p">,</span> <span class="nb">strtoupper</span><span class="p">(</span><span class="nv">$method</span><span class="p">));</span>
+        <span class="nv">$method</span><span class="o">==</span><span class="s1">'POST'</span> <span class="k">and</span> <span class="nb">curl_setopt</span><span class="p">(</span><span class="nv">$curl</span><span class="p">,</span> <span class="nx">CURLOPT_POST</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+        <span class="nv">$data</span> <span class="k">and</span> <span class="nb">curl_setopt</span><span class="p">(</span><span class="nv">$curl</span><span class="p">,</span> <span class="nx">CURLOPT_POSTFIELDS</span><span class="p">,</span><span class="nb">is_array</span><span class="p">(</span><span class="nv">$data</span><span class="p">)</span><span class="o">?</span><span class="nb">http_build_query</span><span class="p">(</span><span class="nv">$data</span><span class="p">)</span><span class="o">:</span><span class="nv">$data</span><span class="p">);</span>
+        <span class="nb">curl_setopt</span><span class="p">(</span><span class="nv">$curl</span><span class="p">,</span> <span class="nx">CURLOPT_TIMEOUT</span><span class="p">,</span> <span class="nv">$timeout</span><span class="p">);</span>
+        <span class="nb">curl_setopt</span><span class="p">(</span><span class="nv">$curl</span><span class="p">,</span> <span class="nx">CURLOPT_HEADER</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+        <span class="nb">curl_setopt</span><span class="p">(</span><span class="nv">$curl</span><span class="p">,</span> <span class="nx">CURLOPT_RETURNTRANSFER</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+        <span class="nv">$tmpInfo</span>   <span class="o">=</span> <span class="nb">curl_exec</span><span class="p">(</span><span class="nv">$curl</span><span class="p">);</span>
+        <span class="nb">curl_close</span><span class="p">(</span><span class="nv">$curl</span><span class="p">);</span>
+        <span class="k">return</span> <span class="nv">$tmpInfo</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li><strong>创建每日拉取数据任务,server处理后,回调接口,client处理数据</strong></li>
+</ul>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">php</span> <span class="nx">artisan</span> <span class="nx">make</span><span class="o">:</span><span class="nx">Command</span> <span class="nx">getMacPerDay</span>
+<span class="c1">//将命令行命令,加入kernel.php
+</span></code></pre></div></div>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+
+<span class="k">namespace</span> <span class="nx">App\Console\Commands</span><span class="p">;</span>
+
+<span class="k">use</span> <span class="nx">Illuminate\Console\Command</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">App\Common\Functions</span><span class="p">;</span>
+
+<span class="k">class</span> <span class="nc">getMacPerDay</span> <span class="k">extends</span> <span class="nx">Command</span>
+<span class="p">{</span>
+    <span class="c1">#命令行调用：php artisan pull:macPerDay 2017-11-14 --queue=zhanggui_perDayMac
+</span>    <span class="c1">#
+</span>    <span class="c1">#
+</span>    <span class="c1">#
+</span>    <span class="k">const</span> <span class="no">DAY_MAC_EXP_REDIS_HOST</span> <span class="o">=</span> <span class="s1">'****'</span><span class="p">;</span>
+    <span class="k">const</span> <span class="no">DAY_MAC_EXP_REDIS_PORT</span> <span class="o">=</span> <span class="s1">'6379'</span><span class="p">;</span>
+    <span class="k">const</span> <span class="no">DAY_MAC_EXP_REDIS_PASS</span> <span class="o">=</span> <span class="s1">'****'</span><span class="p">;</span>
+    <span class="c1">// 日志文件
+</span>    <span class="k">const</span> <span class="no">DAY_MAC_EXP_LOG</span> <span class="o">=</span> <span class="s1">'zhanggui_day_mac'</span><span class="p">;</span>
+
+    <span class="c1">// 到店宝测试账号的AD_ID
+</span>    <span class="k">private</span> <span class="nv">$_ddbTestAdUser</span> <span class="o">=</span> <span class="p">[</span><span class="mi">6</span><span class="p">,</span> <span class="mi">1</span><span class="p">];</span>
+
+    <span class="c1">// 众盟商家平台对DMP平台API 地址
+</span>    <span class="k">private</span> <span class="nv">$_zmMpApi</span> <span class="o">=</span> <span class="s2">""</span><span class="p">;</span>
+
+    <span class="c1">// 每个广告主对应mid列表，两种来源, 1. ad_users表中对应的Mid 2.router 中对应的
+</span>    <span class="k">private</span> <span class="nv">$_midMap</span> <span class="o">=</span> <span class="p">[];</span>
+
+    <span class="c1">// 所有的mid列表
+</span>    <span class="k">private</span> <span class="nv">$_midsList</span> <span class="o">=</span> <span class="p">[];</span>
+
+    <span class="c1">// redis 服务对象
+</span>    <span class="k">private</span> <span class="nv">$_redis</span> <span class="o">=</span> <span class="kc">null</span><span class="p">;</span>
+
+    <span class="c1">// PXY 计算接口地址
+</span>    <span class="k">private</span> <span class="nv">$_macExpServerHost</span> <span class="o">=</span> <span class="s1">'****'</span><span class="p">;</span>
+
+    <span class="sd">/**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */</span>
+    <span class="k">protected</span> <span class="nv">$signature</span> <span class="o">=</span> <span class="s1">'pull:macPerDay {date?} {--queue=zhanggui_perDayMac}'</span><span class="p">;</span>
+                    
+    <span class="sd">/**
+     * The console command description.
+     *
+     * @var string
+     */</span>
+    <span class="k">protected</span> <span class="nv">$description</span> <span class="o">=</span> <span class="s1">'getMacList from xuyuan API once a day'</span><span class="p">;</span>
+
+    <span class="sd">/**
+     * Create a new command instance.
+     *
+     * @return void
+     */</span>
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">__construct</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="k">parent</span><span class="o">::</span><span class="na">__construct</span><span class="p">();</span>
+    <span class="p">}</span>
+
+    <span class="sd">/**
+     * Execute the console command.
+     *
+     * @return mixed
+     */</span>
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">handle</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="nv">$date</span> <span class="o">=</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">argument</span><span class="p">(</span><span class="s1">'date'</span><span class="p">)</span><span class="o">?:</span><span class="nb">date</span><span class="p">(</span><span class="s1">'Ymd'</span><span class="p">,</span><span class="nb">strtotime</span><span class="p">(</span><span class="s1">'-1 day'</span><span class="p">));</span>
+
+        <span class="c1">#任务
+</span>        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_createDayMacExpTask</span><span class="p">(</span><span class="nv">$date</span><span class="p">);</span>
+    <span class="p">}</span>
+
+
+    <span class="sd">/**
+     * 调用PXY接口，让其计算指定日期的数据
+     * @param $date
+     * */</span>
+    <span class="k">private</span> <span class="k">function</span> <span class="nf">_createDayMacExpTask</span><span class="p">(</span><span class="nv">$date</span><span class="p">){</span>
+        <span class="k">if</span><span class="p">(</span><span class="nv">$date</span><span class="p">){</span>
+            <span class="c1">// 发送任务
+</span>            <span class="nv">$apiName</span> <span class="o">=</span> <span class="s1">'/callback/****'</span><span class="p">;</span>
+            <span class="nv">$host</span> <span class="o">=</span> <span class="nx">Config</span><span class="p">(</span><span class="s1">'host.URL_HOST'</span><span class="p">);</span>
+            <span class="nv">$callbackUrl</span> <span class="o">=</span> <span class="nv">$host</span><span class="o">.</span><span class="nv">$apiName</span><span class="p">;</span>
+            <span class="nv">$postJson</span> <span class="o">=</span> <span class="nb">json_encode</span><span class="p">([</span><span class="s1">'dt'</span><span class="o">=&gt;</span><span class="nv">$date</span><span class="p">,</span> <span class="s1">'callback'</span><span class="o">=&gt;</span><span class="nv">$callbackUrl</span><span class="p">]);</span>
+            <span class="nv">$url</span> <span class="o">=</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_macExpServerHost</span> <span class="o">.</span> <span class="s1">'rebuild/****'</span><span class="p">;</span> 
+            <span class="nv">$r</span> <span class="o">=</span> <span class="nb">trim</span><span class="p">(</span><span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_curlRequest</span><span class="p">(</span><span class="nv">$url</span><span class="p">,</span><span class="s1">'POST'</span><span class="p">,</span> <span class="nv">$postJson</span><span class="p">,</span><span class="mi">30</span><span class="p">));</span>
+            <span class="nb">var_dump</span><span class="p">(</span><span class="nv">$postJson</span><span class="p">,</span> <span class="nv">$url</span><span class="p">,</span> <span class="nv">$r</span><span class="p">);</span>
+            <span class="c1">// 记录日志
+</span>            <span class="nv">$log</span> <span class="o">=</span> <span class="nb">date</span><span class="p">(</span><span class="s1">'Y-m-d H:i:s'</span><span class="p">)</span> <span class="o">.</span> <span class="s2">" </span><span class="se">\t</span><span class="s2"> create_task </span><span class="se">\t</span><span class="s2"> </span><span class="si">{</span><span class="nv">$r</span><span class="si">}</span><span class="s2"> </span><span class="se">\t</span><span class="s2"> </span><span class="si">{</span><span class="nv">$postJson</span><span class="si">}</span><span class="s2"> </span><span class="se">\t</span><span class="s2"> </span><span class="si">{</span><span class="nv">$url</span><span class="si">}</span><span class="s2">"</span><span class="p">;</span>
+            <span class="nx">Functions</span><span class="o">::</span><span class="na">log_record</span><span class="p">(</span><span class="nx">self</span><span class="o">::</span><span class="na">DAY_MAC_EXP_LOG</span><span class="p">,</span> <span class="nv">$log</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+
+    <span class="sd">/**
+     * curl方法
+     * @param $url 请求地址
+     * @param $method 请求方法，默认GET
+     * @param $data   请求的数据，默认为空
+     * @param $timeout 超时时间，默认30s
+     * */</span>
+    <span class="k">private</span> <span class="k">function</span> <span class="nf">_curlRequest</span><span class="p">(</span><span class="nv">$url</span><span class="p">,</span><span class="nv">$method</span><span class="o">=</span><span class="s1">'GET'</span><span class="p">,</span><span class="nv">$data</span><span class="o">=</span><span class="kc">null</span><span class="p">,</span><span class="nv">$timeout</span><span class="o">=</span><span class="mi">30</span><span class="p">){</span>
+  <span class="nv">$url</span> <span class="o">.=</span> <span class="s1">'?dd=10086'</span><span class="p">;</span>
+        <span class="nv">$curl</span> <span class="o">=</span> <span class="nb">curl_init</span><span class="p">();</span>
+        <span class="nb">curl_setopt</span><span class="p">(</span><span class="nv">$curl</span><span class="p">,</span> <span class="nx">CURLOPT_URL</span><span class="p">,</span> <span class="nv">$url</span><span class="p">);</span>
+        <span class="nb">curl_setopt</span><span class="p">(</span><span class="nv">$curl</span><span class="p">,</span> <span class="nx">CURLOPT_CUSTOMREQUEST</span><span class="p">,</span> <span class="nb">strtoupper</span><span class="p">(</span><span class="nv">$method</span><span class="p">));</span>
+        <span class="nv">$method</span><span class="o">==</span><span class="s1">'POST'</span> <span class="k">and</span> <span class="nb">curl_setopt</span><span class="p">(</span><span class="nv">$curl</span><span class="p">,</span> <span class="nx">CURLOPT_POST</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+        <span class="nv">$data</span> <span class="k">and</span> <span class="nb">curl_setopt</span><span class="p">(</span><span class="nv">$curl</span><span class="p">,</span> <span class="nx">CURLOPT_POSTFIELDS</span><span class="p">,</span><span class="nb">is_array</span><span class="p">(</span><span class="nv">$data</span><span class="p">)</span><span class="o">?</span><span class="nb">http_build_query</span><span class="p">(</span><span class="nv">$data</span><span class="p">)</span><span class="o">:</span><span class="nv">$data</span><span class="p">);</span>
+        <span class="nb">curl_setopt</span><span class="p">(</span><span class="nv">$curl</span><span class="p">,</span> <span class="nx">CURLOPT_TIMEOUT</span><span class="p">,</span> <span class="nv">$timeout</span><span class="p">);</span>
+        <span class="nb">curl_setopt</span><span class="p">(</span><span class="nv">$curl</span><span class="p">,</span> <span class="nx">CURLOPT_HEADER</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+        <span class="nb">curl_setopt</span><span class="p">(</span><span class="nv">$curl</span><span class="p">,</span> <span class="nx">CURLOPT_RETURNTRANSFER</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+        <span class="nv">$tmpInfo</span>   <span class="o">=</span> <span class="nb">curl_exec</span><span class="p">(</span><span class="nv">$curl</span><span class="p">);</span>
+        <span class="nb">curl_close</span><span class="p">(</span><span class="nv">$curl</span><span class="p">);</span>
+        <span class="k">return</span> <span class="nv">$tmpInfo</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+</code></pre></div></div>
+<ul>
+  <li><strong>每日回调接口</strong></li>
+</ul>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span> 
+<span class="k">namespace</span> <span class="nx">App\Http\Controllers\Admin</span><span class="p">;</span>
+<span class="sd">/**
+数据统计
+*/</span>
+<span class="k">use</span> <span class="nx">Request</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">App\Common\Functions</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">App\Http\Controllers\Controller</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">App\Jobs\PullMac</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">App\Http\Model\Mac</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">App\Http\Model\User</span><span class="p">;</span>
+<span class="sd">/**
+ * Class PassengerController
+ * @package User\Controller
+ * */</span>
+<span class="k">class</span> <span class="nc">MacCallBackController</span> <span class="k">extends</span> <span class="nx">Controller</span> <span class="p">{</span>
+    <span class="k">const</span> <span class="no">ZHANGGUI_DAY_MAC_CALLBACK</span> <span class="o">=</span> <span class="s1">'zhanggui_day_mac_callback'</span><span class="p">;</span><span class="c1">#每日拉取数据回调的日志
+</span>    <span class="c1">#商家mid列表
+</span>    <span class="k">protected</span> <span class="nv">$_midsList</span> <span class="o">=</span> <span class="p">[];</span>
+    
+    <span class="c1">#mac模型
+</span>    <span class="k">protected</span> <span class="nv">$_macModel</span> <span class="o">=</span> <span class="s1">''</span><span class="p">;</span>
+
+    <span class="c1">#redis实例
+</span>    <span class="k">protected</span> <span class="nv">$_redis</span> <span class="o">=</span> <span class="s1">''</span><span class="p">;</span>
+    <span class="sd">/**
+     * 构造方法，如果在里面不初始化一些数据此处可以不用写
+     * */</span>
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">__construct</span><span class="p">(){</span>
+        <span class="c1">#继承父类构造方法
+</span>    <span class="p">}</span>
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">createPerDayTable</span><span class="p">(){</span>
+      <span class="nv">$model</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mac</span><span class="p">();</span>
+      <span class="nv">$model</span><span class="o">-&gt;</span><span class="na">createTable</span><span class="p">();</span>
+    <span class="p">}</span>
+    <span class="sd">/**
+     * 每日更新mac数据回调接口
+     * @param  2017-11-15
+     * @param  [int]
+     * @param  [int]
+     * @param  [string]
+     * @param  [string]
+     * @return [type]     [description]
+     */</span>
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">updateMacDay</span><span class="p">(){</span>
+      <span class="c1">// var_dump(Request::isMethod('post'));die;
+</span>       <span class="k">if</span><span class="p">(</span><span class="nx">Request</span><span class="o">::</span><span class="na">isMethod</span><span class="p">(</span><span class="s1">'post'</span><span class="p">)){</span>
+            <span class="c1">// 2. 获取数据
+</span>            <span class="nv">$db</span>   <span class="o">=</span>  <span class="nx">Request</span><span class="o">::</span><span class="na">input</span><span class="p">(</span><span class="s1">'db'</span><span class="p">,</span><span class="s1">''</span><span class="p">);</span>
+            <span class="nv">$date</span> <span class="o">=</span>  <span class="nx">Request</span><span class="o">::</span><span class="na">input</span><span class="p">(</span><span class="s1">'dt'</span><span class="p">,</span><span class="s1">''</span><span class="p">);</span>
+            <span class="nv">$allData</span> <span class="o">=</span> <span class="nx">Request</span><span class="o">::</span><span class="na">all</span><span class="p">();</span>
+            <span class="k">if</span><span class="p">(</span><span class="nv">$date</span> <span class="o">&amp;&amp;</span> <span class="nv">$db</span> <span class="o">!==</span> <span class="kc">false</span><span class="p">){</span>
+                <span class="c1">// 3. 写消息队列
+</span>                <span class="nv">$date</span> <span class="o">=</span> <span class="nb">date</span><span class="p">(</span><span class="s1">'Ymd'</span><span class="p">,</span> <span class="nb">strtotime</span><span class="p">(</span><span class="nv">$date</span><span class="p">));</span>
+                <span class="nv">$args</span> <span class="o">=</span> <span class="k">array</span><span class="p">(</span>
+                    <span class="s1">'date'</span>    <span class="o">=&gt;</span> <span class="nv">$date</span><span class="p">,</span> 
+                    <span class="s1">'db'</span>      <span class="o">=&gt;</span> <span class="nv">$db</span><span class="p">,</span>
+                    <span class="s1">'time'</span>    <span class="o">=&gt;</span> <span class="nb">time</span><span class="p">(),</span>
+                    <span class="s1">'dateTime'</span> <span class="o">=&gt;</span> <span class="nb">date</span><span class="p">(</span><span class="s1">'Y-m-d H:i:s'</span><span class="p">),</span>
+                <span class="p">);</span>
+		<span class="c1">#将回调任务加入队列处理
+</span>                <span class="nv">$job</span> <span class="o">=</span> <span class="p">(</span><span class="k">new</span> <span class="nx">PullMac</span><span class="p">(</span><span class="nv">$args</span><span class="p">))</span><span class="o">-&gt;</span><span class="na">Onqueue</span><span class="p">(</span><span class="s1">'pullDayMac'</span><span class="p">);</span>
+                <span class="nx">dispatch</span><span class="p">(</span><span class="nv">$job</span><span class="p">);</span>
+                <span class="c1">#记录日志
+</span>                <span class="c1">// $log = date('Y-m-d H:i:s') . "\zhanggui_day_mac_callback\t" . json_encode($allData) . "\t" . json_encode($args);
+</span>                <span class="c1">// Functions::log_record(self::ZHANGGUI_DAY_MAC_CALLBACK, $log);
+</span>                <span class="k">if</span><span class="p">(</span> <span class="nv">$job</span> <span class="p">){</span>
+                  <span class="k">return</span> <span class="nx">Functions</span><span class="o">::</span><span class="na">ajaxReturn</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="s1">''</span><span class="p">,</span> <span class="s1">'job id is ok'</span><span class="p">);</span>
+                <span class="p">}</span><span class="k">else</span><span class="p">{</span>
+                  <span class="k">return</span> <span class="nx">Functions</span><span class="o">::</span><span class="na">ajaxReturn</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="s1">''</span> <span class="p">,</span><span class="s1">'fail'</span><span class="p">);</span>
+                <span class="p">}</span> 
+            <span class="p">}</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="nx">Functions</span><span class="o">::</span><span class="na">ajaxReturn</span><span class="p">(</span><span class="mi">403</span><span class="p">,</span><span class="s1">''</span><span class="p">,</span><span class="s1">'403'</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+</code></pre></div></div>
+
+<ul>
+  <li><strong>Job处理队列</strong></li>
+</ul>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<span class="k">namespace</span> <span class="nx">App\Jobs</span><span class="p">;</span>
+
+<span class="k">use</span> <span class="nx">Illuminate\Bus\Queueable</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">Illuminate\Queue\SerializesModels</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">Illuminate\Queue\InteractsWithQueue</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">Illuminate\Contracts\Queue\ShouldQueue</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">Illuminate\Foundation\Bus\Dispatchable</span><span class="p">;</span>
+<span class="c1">// use Illuminate\Support\Facades\Redis;  
+</span><span class="k">use</span> <span class="nx">App\Http\Model\Mac</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">App\Http\Model\User</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">App\Common\Functions</span><span class="p">;</span>
+
+<span class="k">class</span> <span class="nc">PullMac</span> <span class="k">implements</span> <span class="nx">ShouldQueue</span>
+<span class="p">{</span>
+    <span class="k">use</span> <span class="nx">Dispatchable</span><span class="p">,</span> <span class="nx">InteractsWithQueue</span><span class="p">,</span> <span class="nx">Queueable</span><span class="p">,</span> <span class="nx">SerializesModels</span><span class="p">;</span>
+
+    <span class="k">const</span> <span class="no">DAY_MAC_EXP_REDIS_HOST</span> <span class="o">=</span> <span class="s1">'****'</span><span class="p">;</span>
+    <span class="k">const</span> <span class="no">DAY_MAC_EXP_REDIS_PORT</span> <span class="o">=</span> <span class="s1">'6379'</span><span class="p">;</span>
+    <span class="k">const</span> <span class="no">DAY_MAC_EXP_REDIS_PASS</span> <span class="o">=</span> <span class="s1">'****'</span><span class="p">;</span>
+    <span class="k">const</span> <span class="no">DAY_MAC_EXP_CALL_BACK_LOG</span><span class="o">=</span> <span class="s1">'perDay_callback'</span><span class="p">;</span>
+    <span class="c1">#数据arr
+</span>    <span class="k">protected</span> <span class="nv">$_arr</span> <span class="o">=</span> <span class="p">[];</span>
+
+    <span class="c1">#商家mid列表
+</span>    <span class="k">protected</span> <span class="nv">$_midsList</span> <span class="o">=</span> <span class="p">[];</span>
+    
+    <span class="c1">#mac模型
+</span>    <span class="k">protected</span> <span class="nv">$_macModel</span> <span class="o">=</span> <span class="s1">''</span><span class="p">;</span>
+
+    <span class="c1">#redis实例
+</span>    <span class="k">protected</span> <span class="nv">$_redis</span> <span class="o">=</span> <span class="s1">''</span><span class="p">;</span>
+
+    <span class="k">public</span> <span class="nv">$tries</span> <span class="o">=</span> <span class="mi">5</span><span class="p">;</span>
+
+    <span class="k">public</span> <span class="nv">$timeout</span> <span class="o">=</span> <span class="mi">360</span><span class="p">;</span>
+    <span class="sd">/**
+     * Create a new job instance.
+     *
+     * @return void
+     */</span>
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">__construct</span><span class="p">(</span> <span class="nv">$arr</span> <span class="p">)</span>
+    <span class="p">{</span>
+        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_arr</span> <span class="o">=</span> <span class="nv">$arr</span><span class="p">;</span>
+        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_macModel</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Mac</span><span class="p">();</span>
+
+    <span class="p">}</span>
+
+    <span class="sd">/**
+     * Execute the job.
+     *
+     * @return void
+     */</span>
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">handle</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="nv">$args</span> <span class="o">=</span> <span class="k">array</span><span class="p">(</span>
+                    <span class="s1">'date'</span>    <span class="o">=&gt;</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_arr</span><span class="p">[</span><span class="s1">'date'</span><span class="p">],</span> 
+                    <span class="s1">'db'</span>      <span class="o">=&gt;</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_arr</span><span class="p">[</span><span class="s1">'db'</span><span class="p">],</span>
+                    <span class="s1">'time'</span>    <span class="o">=&gt;</span> <span class="nb">time</span><span class="p">(),</span>
+                    <span class="s1">'dateTime'</span> <span class="o">=&gt;</span> <span class="nb">date</span><span class="p">(</span><span class="s1">'Y-m-d H:i:s'</span><span class="p">),</span>
+                <span class="p">);</span>
+        
+        <span class="nv">$arr</span><span class="p">[</span><span class="s1">'date'</span><span class="p">]</span> <span class="o">=</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_arr</span><span class="p">[</span><span class="s1">'date'</span><span class="p">];</span>
+        <span class="nv">$log</span> <span class="o">=</span> <span class="nb">date</span><span class="p">(</span><span class="s1">'Y-m-d H:i:s'</span><span class="p">)</span> <span class="o">.</span> <span class="s2">" </span><span class="se">\t</span><span class="s2"> callback </span><span class="se">\t</span><span class="s2">"</span><span class="o">.</span><span class="nb">json_encode</span><span class="p">(</span><span class="nv">$args</span><span class="p">)</span><span class="o">.</span><span class="s2">" "</span><span class="p">;</span>
+        <span class="nx">Functions</span><span class="o">::</span><span class="na">log_record</span><span class="p">(</span><span class="nx">self</span><span class="o">::</span><span class="na">DAY_MAC_EXP_CALL_BACK_LOG</span><span class="p">,</span> <span class="nv">$log</span><span class="p">);</span>
+        <span class="nv">$date</span> <span class="o">=</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_arr</span><span class="p">[</span><span class="s1">'date'</span><span class="p">];</span>
+        <span class="nv">$db</span> <span class="o">=</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_arr</span><span class="p">[</span><span class="s1">'db'</span><span class="p">];</span>
+        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_getRedis</span><span class="p">(</span><span class="nv">$db</span><span class="p">);</span>
+        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_updateDayMac</span><span class="p">(</span><span class="nv">$date</span><span class="p">,</span><span class="nv">$db</span><span class="p">);</span>  
+    <span class="p">}</span>
+
+    <span class="sd">/**
+     * 从PXY的Redis 获取 指定商家MAC数据
+     * @param $date 处理的日期
+     * @param $db   使用的数据库
+     * */</span>
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">_updateDayMac</span><span class="p">(</span><span class="nv">$date</span><span class="p">,</span> <span class="nv">$db</span><span class="p">){</span>
+        <span class="k">if</span><span class="p">(</span><span class="nv">$date</span> <span class="o">&amp;&amp;</span> <span class="p">(</span><span class="nv">$db</span><span class="o">&gt;</span><span class="mi">0</span> <span class="o">||</span> <span class="nv">$db</span><span class="o">===</span><span class="mi">0</span><span class="p">)</span> <span class="p">){</span>
+            <span class="c1">// 1. 初始化Mid列表
+</span>            <span class="nv">$userModel</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">User</span><span class="p">();</span>
+            <span class="nv">$_midsList</span> <span class="o">=</span> <span class="nv">$userModel</span><span class="o">-&gt;</span><span class="na">getMidListArr</span><span class="p">();</span>
+            <span class="c1">// 3 循环处理 每个商家
+</span>            <span class="nv">$todayTime</span> <span class="o">=</span> <span class="nb">strtotime</span><span class="p">(</span><span class="nv">$date</span><span class="p">);</span> <span class="nv">$tomorTime</span> <span class="o">=</span> <span class="nb">strtotime</span><span class="p">(</span><span class="s2">"</span><span class="si">{</span><span class="nv">$date</span><span class="si">}</span><span class="s2"> +1 day"</span><span class="p">);</span>
+            <span class="nv">$dataList</span>  <span class="o">=</span> <span class="p">[];</span> <span class="nv">$totalDataRows</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> 
+            <span class="c1">// $cusMacModel    = new \User\Model\CusmacModel();
+</span>            <span class="nv">$i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+            <span class="k">foreach</span><span class="p">(</span><span class="nv">$_midsList</span> <span class="k">as</span> <span class="nv">$mid</span><span class="p">){</span>
+                <span class="c1">// 3.1 删除此商家此日期的MAC
+</span>                <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_macModel</span><span class="o">-&gt;</span><span class="na">delMacInfo</span><span class="p">(</span><span class="nv">$mid</span><span class="p">,</span><span class="nv">$date</span><span class="p">);</span>
+                <span class="c1">// 3.2 获取所有MAC列表
+</span>                <span class="nv">$midMacListKey</span> <span class="o">=</span> <span class="nv">$date</span> <span class="o">.</span> <span class="s2">"_</span><span class="si">{</span><span class="nv">$mid</span><span class="si">}</span><span class="s2">_mac_list"</span><span class="p">;</span>
+                <span class="nv">$midMacListArr</span> <span class="o">=</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_redis</span><span class="o">-&gt;</span><span class="na">sMembers</span><span class="p">(</span><span class="nv">$midMacListKey</span><span class="p">)</span> <span class="o">?</span> <span class="o">:</span> <span class="p">[];</span>
+                <span class="c1">// 3.3 循环处理每个MAC,计算 首次/最后到店时间, 停留时间,次数
+</span>                <span class="k">foreach</span><span class="p">(</span><span class="nv">$midMacListArr</span> <span class="k">as</span> <span class="nv">$mac</span><span class="p">){</span>
+                    <span class="c1">// 3.4 获取MAC 到店LIST信息
+</span>                    <span class="nv">$macListKey</span> <span class="o">=</span> <span class="s2">"</span><span class="si">{</span><span class="nv">$date</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="nv">$mid</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="nv">$mac</span><span class="si">}</span><span class="s2">"</span><span class="p">;</span>
+                    <span class="nv">$macListArr</span> <span class="o">=</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_redis</span><span class="o">-&gt;</span><span class="na">lRange</span><span class="p">(</span><span class="nv">$macListKey</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">?</span> <span class="o">:</span> <span class="p">[];</span>
+                    <span class="c1">// 3.5 计算首次,最后一次到店时间
+</span>                    <span class="nv">$visitTimes</span> <span class="o">=</span> <span class="nb">count</span><span class="p">(</span><span class="nv">$macListArr</span><span class="p">)</span> <span class="o">?</span> <span class="o">:</span> <span class="mi">1</span><span class="p">;</span>
+                    <span class="nv">$stayTime</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> 
+                    <span class="nv">$inTimeArr</span> <span class="o">=</span> <span class="p">[];</span>
+                    <span class="nb">array_walk</span><span class="p">(</span><span class="nv">$macListArr</span><span class="p">,</span> <span class="k">function</span><span class="p">(</span><span class="nv">$v</span><span class="p">)</span> <span class="k">use</span><span class="p">(</span><span class="o">&amp;</span><span class="nv">$stayTime</span><span class="p">,</span> <span class="o">&amp;</span><span class="nv">$inTimeArr</span><span class="p">,</span> <span class="o">&amp;</span><span class="nv">$fullTimeArr</span><span class="p">){</span>
+                        <span class="k">list</span><span class="p">(</span><span class="nv">$inTime</span><span class="p">,</span> <span class="nv">$outTime</span><span class="p">)</span> <span class="o">=</span> <span class="nb">explode</span><span class="p">(</span><span class="s1">','</span><span class="p">,</span> <span class="nv">$v</span><span class="p">);</span>
+                        <span class="nv">$stayTime</span> <span class="o">+=</span> <span class="p">(</span><span class="nv">$outTime</span><span class="o">-</span> <span class="nv">$inTime</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">?</span> <span class="p">(</span><span class="nv">$outTime</span><span class="o">-</span><span class="nv">$inTime</span><span class="p">)</span> <span class="o">:</span> <span class="mi">0</span><span class="p">;</span>               <span class="c1"># 停留时间
+</span>                        <span class="nv">$inTimeArr</span><span class="p">[]</span>   <span class="o">=</span> <span class="nv">$inTime</span><span class="p">;</span>
+                    <span class="p">});</span>
+                    <span class="c1">// 3.6 数据合法性校验
+</span>                    <span class="nv">$firstTime</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="nv">$inTimeArr</span><span class="p">);</span>                                                                       <span class="c1"># 首次到店时间
+</span>                    <span class="nv">$firstTime</span> <span class="o">=</span> <span class="p">(</span><span class="nv">$firstTime</span> <span class="o">&gt;=</span> <span class="nv">$todayTime</span> <span class="o">&amp;&amp;</span> <span class="nv">$firstTime</span> <span class="o">&lt;=</span> <span class="nv">$tomorTime</span> <span class="p">)</span> <span class="o">?</span> <span class="nv">$firstTime</span> <span class="o">:</span> <span class="nv">$todayTime</span><span class="p">;</span>     <span class="c1"># 首次到店时间在今天时间内        
+</span>                    <span class="nv">$lastTime</span>  <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nv">$inTimeArr</span><span class="p">);</span>                                                                       <span class="c1"># 最后一次到店时间
+</span>                    <span class="nv">$lastTime</span>  <span class="o">=</span> <span class="p">(</span> <span class="nv">$lastTime</span> <span class="o">&gt;=</span> <span class="nv">$firstTime</span> <span class="o">&amp;&amp;</span> <span class="nv">$lastTime</span> <span class="o">&lt;=</span> <span class="nv">$tomorTime</span> <span class="p">)</span>  <span class="o">?</span> <span class="nv">$lastTime</span>  <span class="o">:</span> <span class="nv">$firstTime</span><span class="p">;</span>     <span class="c1"># 最后一次到店时间大于首次到店时间且在今天
+</span>                    <span class="nv">$maxStayTime</span> <span class="o">=</span> <span class="nv">$tomorTime</span> <span class="o">-</span> <span class="nv">$firstTime</span><span class="p">;</span>                                                             <span class="c1"># 最大停留时间为，首次到店时间到24点期间
+</span>                    <span class="nv">$stayTime</span>    <span class="o">=</span> <span class="nv">$stayTime</span> <span class="o">&gt;</span> <span class="nv">$maxStayTime</span> <span class="o">?</span> <span class="nv">$maxStayTime</span> <span class="o">:</span> <span class="nv">$stayTime</span><span class="p">;</span>                                 <span class="c1"># 停留时间处理
+</span>                    <span class="c1">// 3.7 拼接数据并保存
+</span>                    <span class="nv">$dataList</span><span class="p">[</span><span class="nv">$mid</span><span class="p">][]</span> <span class="o">=</span> <span class="p">[</span>
+                        <span class="s1">'mid'</span>  <span class="o">=&gt;</span> <span class="nv">$mid</span><span class="p">,</span>
+                        <span class="s1">'mac'</span>  <span class="o">=&gt;</span> <span class="nv">$mac</span><span class="p">,</span>
+                        <span class="s1">'date'</span> <span class="o">=&gt;</span> <span class="nv">$date</span><span class="p">,</span>
+                        <span class="s1">'first_visit_time'</span> <span class="o">=&gt;</span> <span class="nb">date</span><span class="p">(</span><span class="s1">'Y-m-d H:i:s'</span><span class="p">,</span> <span class="nv">$firstTime</span><span class="p">),</span>
+                        <span class="s1">'last_visit_time'</span>  <span class="o">=&gt;</span> <span class="nb">date</span><span class="p">(</span><span class="s1">'Y-m-d H:i:s'</span><span class="p">,</span> <span class="nv">$lastTime</span><span class="p">),</span>
+                        <span class="s1">'stay_time'</span> <span class="o">=&gt;</span> <span class="nv">$stayTime</span><span class="p">,</span>
+                        <span class="s1">'visit_times'</span> <span class="o">=&gt;</span> <span class="nv">$visitTimes</span><span class="p">,</span>
+                    <span class="p">];</span>
+                    <span class="nv">$i</span><span class="o">++</span><span class="p">;</span>
+                    <span class="nv">$totalDataRows</span> <span class="o">+=</span> <span class="mi">1</span><span class="p">;</span>
+                    <span class="c1">// 3.8 批量添加
+</span>                    <span class="k">if</span><span class="p">(</span> <span class="nv">$i</span> <span class="o">==</span> <span class="mi">100</span> <span class="p">){</span>
+                        <span class="nv">$i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+                        <span class="nv">$res</span> <span class="o">=</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_macModel</span><span class="o">-&gt;</span><span class="na">insertAllData</span><span class="p">(</span> <span class="nv">$dataList</span> <span class="p">);</span>
+                        <span class="nv">$dataList</span> <span class="o">=</span> <span class="p">[];</span>
+                        <span class="nv">$f</span> <span class="o">=</span> <span class="nb">fopen</span><span class="p">(</span><span class="s1">'rows.txt'</span><span class="p">,</span> <span class="s1">'a+'</span><span class="p">);</span>
+                        <span class="nb">fwrite</span><span class="p">(</span><span class="nv">$f</span><span class="p">,</span> <span class="nv">$totalDataRows</span><span class="p">);</span>
+                        <span class="nb">fclose</span><span class="p">(</span><span class="nv">$f</span><span class="p">);</span>
+                    <span class="p">}</span>
+                <span class="p">}</span> <span class="c1">// end foreach mac
+</span>            <span class="p">}</span> <span class="c1">// end foreach mid
+</span>            <span class="c1">// 4. 关闭Redis
+</span>            <span class="c1">// $this-&gt;_redis-&gt;close();
+</span>            <span class="c1">// 5.最后，将剩余数据保存
+</span>            <span class="k">if</span><span class="p">(</span> <span class="nb">count</span><span class="p">(</span><span class="nv">$dataList</span><span class="p">)</span> <span class="p">){</span>
+                <span class="nv">$res</span> <span class="o">=</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_macModel</span><span class="o">-&gt;</span><span class="na">insertAllData</span><span class="p">(</span> <span class="nv">$dataList</span> <span class="p">);</span>
+                <span class="k">echo</span> <span class="nv">$totalDataRows</span><span class="p">;</span>
+                <span class="nv">$dataList</span> <span class="o">=</span> <span class="p">[];</span>
+            <span class="p">}</span>
+        <span class="p">}</span> <span class="c1">// end if
+</span>    <span class="p">}</span>
+
+    <span class="sd">/**
+     * 连接Redis
+     * @param return obj
+     * */</span>
+    <span class="k">private</span> <span class="k">function</span> <span class="nf">_getRedis</span><span class="p">(</span><span class="nv">$db</span><span class="p">){</span>
+        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_redis</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">\Redis</span><span class="p">();</span>
+        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_redis</span><span class="o">-&gt;</span><span class="na">connect</span><span class="p">(</span><span class="nx">self</span><span class="o">::</span><span class="na">DAY_MAC_EXP_REDIS_HOST</span><span class="p">,</span> <span class="nx">self</span><span class="o">::</span><span class="na">DAY_MAC_EXP_REDIS_PORT</span><span class="p">);</span>
+        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_redis</span><span class="o">-&gt;</span><span class="na">auth</span><span class="p">(</span><span class="nx">self</span><span class="o">::</span><span class="na">DAY_MAC_EXP_REDIS_PASS</span><span class="p">);</span>
+        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_redis</span><span class="o">-&gt;</span><span class="na">select</span><span class="p">(</span><span class="nv">$db</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+</code></pre></div></div>
+
+    </article>
+    
+    <div class="social-share-wrapper">
+        <div class="social-share"></div>
+    </div>
+    
+</div>
+
+<section class="author-detail">
+    <section class="post-footer-item author-card">
+        <div class="avatar">
+            <img src="http://localhost:4000/assets/img/profile.png" alt="">
+        </div>
+        <div class="author-name" rel="author">gojson</div>
+        <div class="bio">
+            <p>PHP开发者,热爱技术,分享知识,共同成长</p>
+        </div>
+        
+        <ul class="sns-links">
+            
+            <li>
+                <a href="//weibo.com/u/1008277207/home?topnav=1&wvr=6" target="_blank">
+                    <i class="iconfont icon-weibo"></i>
+                </a>
+            </li>
+            
+            <li>
+                <a href="//juejin.im/user/57a6f434165abd006159b4cc" target="_blank">
+                    <i class="iconfont icon-juejin"></i>
+                </a>
+            </li>
+            
+            <li>
+                <a href="//github.com/gojson" target="_blank">
+                    <i class="iconfont icon-github"></i>
+                </a>
+            </li>
+            
+        </ul>
+        
+    </section>
+    <section class="post-footer-item read-next">
+        
+        <div class="read-next-item">
+            <a href="/php/2017/12/07/thinkphp-resqueue.html" class="read-next-link"></a>
+            <section>
+                <span>Thinkphp3.2 配置消息队列php-Resque</span>
+                <p>1.0 情景描述:使用ThinkPhp3.2 + php-Resque 实现消息队列,php-resque是php...</p>
+            </section>
+            
+            <div class="filter"></div>
+            <img src="http://on2171g4d.bkt.clouddn.com/jekyll-theme-h2o-postcover.jpg" alt="">
+            
+        </div>
+        
+        
+        <div class="read-next-item">
+            <a href="/php/2017/12/07/laravel_quque_database.html" class="read-next-link"></a>
+            <section>
+                <span>Laravel配置redis队列-Database</span>
+                <p>1.0 情景描述:使用Laravel5.4框架,处理消息队列，redis队列的database方式</p>
+            </section>
+            
+            <div class="filter"></div>
+            <img src="http://on2171g4d.bkt.clouddn.com/jekyll-theme-h2o-postcover.jpg" alt="">
+            
+        </div>
+        
+    </section>
+    
+</section>
+
+<footer class="g-footer">
+    <section>goJson的独立博客 © 2017</section>
+    <section>Powered by <a href="//gojson.cn">Json</a> | <a href="https://github.com/gojson">H20</a></section>
+</footer>
+
+
+<!--
+<script src="/assets/js/social-share.min.js"></script>
+
+<script>
+   socialShare('.social-share', {
+        sites: ['wechat','weibo','douban','twitter'],
+        wechatQrcodeTitle: "分享到微信朋友圈",
+        wechatQrcodeHelper: '<p>扫码后点击右上角</p><p>将本文分享至朋友圈</p>'
+    });
+</script>
+-->
+<script>
+
+/**
+*  RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
+*  LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables*/
+/*
+var disqus_config = function () {
+this.page.url = PAGE_URL;  // Replace PAGE_URL with your page's canonical URL variable
+this.page.identifier = PAGE_IDENTIFIER; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+};
+*/
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+/*写入自己的disqus信息*/
+s.src = 'https://liaokeyu.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<script src="https://cdn.staticfile.org/jquery/3.2.1/jquery.min.js"></script>
+<script src="/assets/js/prism.js"></script>
+<script src="/assets/js/index.min.js"></script>
+</body>
+</html>

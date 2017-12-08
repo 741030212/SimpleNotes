@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>gateWayWorker服务器回调 - goJson的独立博客</title>
+    <meta name="author"  content="gojson">
+    <meta name="description" content="gateWayWorker服务器回调">
+    <meta name="keywords"  content="php">
+    <!-- Open Graph -->
+    <meta property="og:title" content="gateWayWorker服务器回调 - goJson的独立博客">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="http://localhost:4000/php/2017/12/07/gatewayworker.html">
+    <meta property="og:description" content="gojson record my life with you,record my simple IT level。">
+    <meta property="og:site_name" content="goJson的独立博客">
+    <link rel="stylesheet" href="//cdn.staticfile.org/normalize/6.0.0/normalize.min.css">
+    <link rel="stylesheet" href="//at.alicdn.com/t/font_roc50gemkxpw4s4i.css">
+    <link rel="stylesheet" href="/assets/css/github-markdown.css">
+    <link rel="stylesheet" href="/assets/css/prism.css">
+    <link rel="stylesheet" href="/assets/css/share.min.css">
+    <link rel="stylesheet" href="/assets/css/app.min.css">
+</head>
+<body>
+    <!--[if lt IE 10]>
+<div class="alert-danger" role="alert">你的浏览器实在太太太旧了，放学别走，升级完浏览器再说！<a target="_blank" class="alert-link" href="http://browsehappy.com">立即升级</a></div>
+<![endif]-->
+<input id="nm-switch" type="hidden" value="true">
+
+<header class="g-header">
+    <div class="g-logo">
+      <a href="/"></a>
+    </div>
+    <i id="menu-toggle" class="iconfont icon-menu"></i>
+    <nav class="g-nav">
+        <ul>
+            
+            <li><a href="/">home</a></li>
+            
+            <li><a href="/tags.html">tags</a></li>
+            
+        </ul>
+    </nav>
+</header>
+
+
+<header class="g-banner post-header post-pattern-circuitBoard bgcolor-default " data-theme="default">
+    <div class="post-wrapper">
+        <div class="post-tags">
+            
+            
+            <a href="http://localhost:4000/tags#php" class="post-tag">php</a>
+            
+            
+        </div>
+        <h1>gateWayWorker服务器回调</h1>
+        <div class="post-meta">
+            <span class="post-meta-item"><i class="iconfont icon-author"></i><a href="http://localhost:4000" target="_blank" rel="author">gojson</a></></span>
+            <time class="post-meta-item" datetime="17-12-07"><i class="iconfont icon-date"></i>07 Dec 2017</time>
+        </div>
+    </div>
+    
+    <div class="filter"></div>
+    <div class="post-cover" style="background: url('/notes.jpg') center no-repeat; background-size: cover;">
+    
+</header>
+
+<div class="post-content">
+    
+    <h2 class="post-subtitle">thinkphp3.2回调任务处理</h2>
+    
+    <article class="markdown-body">
+        <h2 id="10-情景描述">1.0 情景描述:</h2>
+<p>客户端上传文件发起任务-&gt;等待远程服务器处理任务,任务处理完成-&gt;回调接口-&gt;通知客户端任务已经处理。</p>
+
+<h2 id="20-原文地址">2.0 原文地址</h2>
+<ul>
+  <li><a href="http://www.ptbird.cn/gateway-worker-many-people-chat-online-group.html">借鉴原文地址</a></li>
+</ul>
+
+<h2 id="30-server">3.0 server:</h2>
+<ul>
+  <li><a href="https://github.com/walkor/GatewayWorker">服务端下载地址</a></li>
+</ul>
+
+<h2 id="40-client">4.0 client:</h2>
+<ul>
+  <li><a href="http://doc2.workerman.net/326102">gatewayworker手册官网地址</a></li>
+  <li><a href="https://github.com/walkor/GatewayClient">客户端下载地址</a></li>
+</ul>
+
+<h2 id="50-简介">5.0 简介:</h2>
+<ul>
+  <li>gatewayClient
+gateClient是用来辅助 workerman或者是gateway进行用户分组以及向用户发送信息的组件，同时，能够快速便捷的将原有系统的uid和clientid绑定起来。
+gateway-worker(后面直接称gateway)是基于 workerman开发的TCP长连接框架，用于快速开发TCP长连接应用。
+在线聊天一般都是实用长连接保持通信，使用 workerman虽然能够做到同样的效果，但是gateway更加的方便快捷。</li>
+</ul>
+
+<h2 id="60-使用方法">6.0 使用方法:</h2>
+<p>一、理论：</p>
+<ol>
+  <li>与MVC系统整合的原则：
+    <ul>
+      <li>现有mvc框架项目与GatewayWorker独立部署互不干扰</li>
+      <li>所有的业务逻辑都由网站页面post/get到mvc框架中完成</li>
+      <li>GatewayWorker不接受客户端发来的数据，即GatewayWorker不处理任何业务逻辑，GatewayWorker仅仅当做一个单向的推送通道</li>
+      <li>仅当mvc框架需要向浏览器主动推送数据时才在mvc框架中调用Gateway的API(GatewayClient)完成推送</li>
+    </ul>
+  </li>
+  <li>实现步骤:
+    <ul>
+      <li>网站页面建立与GatewayWorker的websocket连接</li>
+      <li>GatewayWorker发现有页面发起连接时，将对应连接的client_id发给网站页面</li>
+      <li>网站页面收到client_id后触发一个ajax请求(假设是bind.php)将client_id发到mvc后端</li>
+      <li>mvc后端bind.php收到client_id后利用GatewayClient调用Gateway::bindUid($client_id, $uid)将client_id与当前uid(用户id或者客户端唯一标识)绑定。如果有群组、群发功能，也可以利用Gateway::joinGroup($client_id, $group_id)将client_id加入到对应分组</li>
+      <li>页面发起的所有请求都直接post/get到mvc框架统一处理，包括发送消息</li>
+      <li>mvc框架处理业务过程中需要向某个uid或者某个群组发送数据时，直接调用GatewayClient的接口Gateway::sendToUid Gateway::sendToGroup 等发送即可</li>
+    </ul>
+  </li>
+</ol>
+
+<p>二、server端配置:</p>
+<ul>
+  <li>下载地址: https://github.com/walkor/GatewayWorker</li>
+  <li>Application/YourApp/Events.php</li>
+</ul>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">class</span> <span class="nc">Events</span>
+<span class="p">{</span>
+    <span class="sd">/**
+     * 当客户端连接时触发
+     * 如果业务不需此回调可以删除onConnect
+     * 
+     * @param int $client_id 连接id
+     */</span>
+    <span class="k">public</span> <span class="k">static</span> <span class="k">function</span> <span class="nf">onConnect</span><span class="p">(</span><span class="nv">$client_id</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">#绑定用户uid 和client_id
+</span>        <span class="nv">$send_data</span> <span class="o">=</span> <span class="nb">json_encode</span><span class="p">(</span><span class="k">array</span><span class="p">(</span>
+                        <span class="s1">'client_id'</span>  <span class="o">=&gt;</span> <span class="nv">$client_id</span><span class="p">,</span>
+                        <span class="s1">'type'</span>       <span class="o">=&gt;</span><span class="s1">'init'</span><span class="p">,</span>
+                    <span class="p">));</span>
+        <span class="nx">Gateway</span><span class="o">::</span><span class="na">sendToClient</span><span class="p">(</span><span class="nv">$client_id</span><span class="p">,</span><span class="nv">$send_data</span><span class="p">);</span>
+    <span class="p">}</span>
+    
+   <span class="sd">/**
+    * 当客户端发来消息时触发
+    * @param int $client_id 连接id
+    * @param mixed $message 具体消息
+    */</span>
+   <span class="k">public</span> <span class="k">static</span> <span class="k">function</span> <span class="nf">onMessage</span><span class="p">(</span><span class="nv">$client_id</span><span class="p">,</span> <span class="nv">$message</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// 向所有人发送 
+</span>        <span class="c1">// Gateway::sendToAll("$client_id said $message");
+</span>   <span class="p">}</span>
+   
+   <span class="sd">/**
+    * 当用户断开连接时触发
+    * @param int $client_id 连接id
+    */</span>
+   <span class="k">public</span> <span class="k">static</span> <span class="k">function</span> <span class="nf">onClose</span><span class="p">(</span><span class="nv">$client_id</span><span class="p">)</span> <span class="p">{</span>
+       <span class="c1">// 向所有人发送 
+</span>       <span class="nx">GateWay</span><span class="o">::</span><span class="na">sendToAll</span><span class="p">(</span><span class="s2">"</span><span class="nv">$client_id</span><span class="s2"> logout"</span><span class="p">);</span>
+   <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<ul>
+  <li>Application/YourApp/start_gateway.php</li>
+</ul>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">use</span> <span class="nx">\Workerman\Worker</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">\Workerman\WebServer</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">\GatewayWorker\Gateway</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">\GatewayWorker\BusinessWorker</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">\Workerman\Autoloader</span><span class="p">;</span>
+
+<span class="c1">// gateway 进程，这里使用Text协议，可以用telnet测试
+</span><span class="nv">$gateway</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">Gateway</span><span class="p">(</span><span class="s2">"websocket://0.0.0.0:8284"</span><span class="p">);</span>
+<span class="c1">// gateway名称，status方便查看
+</span><span class="nv">$gateway</span><span class="o">-&gt;</span><span class="na">name</span> <span class="o">=</span> <span class="s1">'task'</span><span class="p">;</span>
+<span class="c1">// gateway进程数
+</span><span class="nv">$gateway</span><span class="o">-&gt;</span><span class="na">count</span> <span class="o">=</span> <span class="mi">4</span><span class="p">;</span>
+<span class="c1">// 本机ip，分布式部署时使用内网ip
+</span><span class="nv">$gateway</span><span class="o">-&gt;</span><span class="na">lanIp</span> <span class="o">=</span> <span class="s1">'127.0.0.1'</span><span class="p">;</span>
+<span class="c1">// 内部通讯起始端口，假如$gateway-&gt;count=4，起始端口为4000
+// 则一般会使用4000 4001 4002 4003 4个端口作为内部通讯端口 
+</span><span class="nv">$gateway</span><span class="o">-&gt;</span><span class="na">startPort</span> <span class="o">=</span> <span class="mi">2900</span><span class="p">;</span>
+<span class="c1">// 服务注册地址
+</span><span class="nv">$gateway</span><span class="o">-&gt;</span><span class="na">registerAddress</span> <span class="o">=</span> <span class="s1">'127.0.0.1:1238'</span><span class="p">;</span>
+ 
+</code></pre></div></div>
+<ul>
+  <li>start.php 放在项目根目录</li>
+</ul>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">//以debug（调试）方式启动
+</span><span class="nx">php</span> <span class="nx">start</span><span class="o">.</span><span class="nx">php</span> <span class="nx">start</span>
+
+<span class="c1">//以daemon（守护进程）方式启动
+</span><span class="nx">php</span> <span class="nx">start</span><span class="o">.</span><span class="nx">php</span> <span class="nx">start</span> <span class="o">-</span><span class="nx">d</span>
+
+<span class="c1">//停止
+</span><span class="nx">php</span> <span class="nx">start</span><span class="o">.</span><span class="nx">php</span> <span class="nx">stop</span>
+<span class="c1">//重启
+</span><span class="nx">php</span> <span class="nx">start</span><span class="o">.</span><span class="nx">php</span> <span class="nx">restart</span>
+
+<span class="c1">//平滑重启
+</span><span class="nx">php</span> <span class="nx">start</span><span class="o">.</span><span class="nx">php</span> <span class="nx">reload</span>
+
+<span class="c1">//查看状态
+</span><span class="nx">php</span> <span class="nx">start</span><span class="o">.</span><span class="nx">php</span> <span class="nx">status</span>
+
+</code></pre></div></div>
+<ul>
+  <li>前端js</li>
+</ul>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&lt;</span><span class="nx">script</span><span class="o">&gt;</span>
+
+<span class="nx">$</span><span class="p">().</span><span class="nx">ready</span><span class="p">(</span><span class="kd">function</span><span class="p">(){</span>
+    <span class="kd">var</span> <span class="nx">noticeDiv</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span><span class="s1">'#zm-task-finish-notice'</span><span class="p">);</span>
+    <span class="kd">var</span> <span class="nx">aside</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span><span class="s1">'#zm-task-finish-status'</span><span class="p">);</span>
+    <span class="kd">var</span> <span class="nx">ws</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">WebSocket</span><span class="p">(</span><span class="s2">"ws://{:C('ZM_TASK_GATEWAY_URL')}"</span><span class="p">);</span> <span class="c1">//new WebSocket('ws://task.dev:8284');//new WebSocket('ws://127.0.0.1:8284');</span>
+    <span class="nx">ws</span><span class="p">.</span><span class="nx">onopen</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">()</span> <span class="p">{</span> <span class="p">};</span>
+    <span class="nx">ws</span><span class="p">.</span><span class="nx">onmessage</span> <span class="o">=</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">evt</span><span class="p">)</span> <span class="p">{</span> 
+        <span class="kd">var</span> <span class="nx">res</span> <span class="o">=</span> <span class="kr">eval</span><span class="p">(</span><span class="s2">"("</span><span class="o">+</span><span class="nx">evt</span><span class="p">.</span><span class="nx">data</span><span class="o">+</span><span class="s2">")"</span><span class="p">);</span>
+        <span class="kd">var</span> <span class="nx">type</span> <span class="o">=</span> <span class="nx">res</span><span class="p">.</span><span class="nx">type</span><span class="p">;</span>
+        <span class="kd">var</span> <span class="nx">ajaxUrl</span><span class="o">=</span><span class="s2">"{:('/Zmeng/Task/bind')}"</span><span class="p">;</span>
+        <span class="k">switch</span><span class="p">(</span><span class="nx">type</span><span class="p">){</span>
+            <span class="c1">// Events.php中返回的init类型的消息，将client_id发给后台进行uid绑定</span>
+            <span class="k">case</span> <span class="s1">'init'</span><span class="p">:</span>
+                <span class="c1">// 利用jquery发起ajax请求，将client_id发给后端进行uid绑定</span>
+                <span class="nx">$</span><span class="p">.</span><span class="nx">post</span><span class="p">(</span><span class="nx">ajaxUrl</span><span class="p">,</span> <span class="p">{</span><span class="na">client_id</span><span class="p">:</span> <span class="nx">res</span><span class="p">.</span><span class="nx">client_id</span><span class="p">},</span> <span class="kd">function</span><span class="p">(</span><span class="nx">data</span><span class="p">){</span>
+                    <span class="c1">// alert(data.status);</span>
+                <span class="p">},</span> <span class="s1">'json'</span><span class="p">);</span>
+                <span class="k">break</span><span class="p">;</span>
+            <span class="c1">// 当mvc框架调用GatewayClient发消息时直接alert出来</span>
+            <span class="nl">default</span> <span class="p">:</span>
+                <span class="k">if</span><span class="p">(</span><span class="nx">res</span><span class="p">.</span><span class="nx">status</span> <span class="o">==</span> <span class="mi">0</span><span class="p">){</span>
+                <span class="c1">// for(var i=0;i&lt;res.info.length;i++){</span>
+                <span class="nx">$</span><span class="p">.</span><span class="nx">each</span><span class="p">(</span><span class="nx">res</span><span class="p">.</span><span class="nx">info</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">i</span><span class="p">,</span> <span class="nx">item</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="c1">// 提示信息</span>
+                    <span class="kd">var</span> <span class="nx">taskId</span> <span class="o">=</span> <span class="nx">res</span><span class="p">.</span><span class="nx">info</span><span class="p">[</span><span class="nx">i</span><span class="p">].</span><span class="nx">id</span><span class="p">;</span>
+                    <span class="kd">var</span> <span class="nx">successHtml</span> <span class="o">=</span> <span class="s1">'&lt;div class="alert alert-success alert-dismissible"&gt;'</span>
+                                      <span class="o">+</span><span class="s1">'     &lt;button type="button" class="close" data-dismiss="alert" aria-hidden="true"&gt;×&lt;/button&gt;'</span>
+                                      <span class="o">+</span><span class="s1">'     &lt;h4&gt;&lt;i class="icon fa fa-check"&gt;&lt;/i&gt;任务&amp;nbsp;'</span><span class="o">+</span><span class="nx">taskId</span><span class="o">+</span><span class="s1">'&amp;nbsp;成功&lt;/h4&gt;'</span>
+                                      <span class="o">+</span><span class="s1">'     &lt;p&gt;任务&amp;nbsp;&lt;strong&gt;'</span><span class="o">+</span><span class="nx">taskId</span><span class="o">+</span><span class="s1">'&lt;/strong&gt;&amp;nbsp;成功，请&lt;a target="_blank" href="/zmeng/task/index/id/'</span><span class="o">+</span><span class="nx">taskId</span><span class="o">+</span><span class="s1">'"&gt;&lt;strong&gt;点击此处&lt;/strong&gt;&lt;/a&gt;查看。&lt;/p&gt;'</span>
+                                      <span class="o">+</span><span class="s1">'&lt;/div&gt;'</span><span class="p">;</span>
+                    <span class="nx">noticeDiv</span><span class="p">.</span><span class="nx">prepend</span><span class="p">(</span><span class="nx">successHtml</span><span class="p">);</span>
+                    <span class="nx">changeBtnStat</span><span class="p">(</span><span class="nx">taskId</span><span class="p">,</span><span class="s1">'success'</span><span class="p">);</span>
+                    <span class="c1">// 修改结束时间</span>
+                    <span class="nx">$</span><span class="p">(</span><span class="s1">'#task-finish-time-'</span><span class="o">+</span><span class="nx">taskId</span><span class="p">).</span><span class="nx">text</span><span class="p">(</span><span class="nx">res</span><span class="p">.</span><span class="nx">info</span><span class="p">[</span><span class="nx">taskId</span><span class="p">].</span><span class="nx">finish_time</span><span class="p">);</span>
+                    <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">res</span><span class="p">.</span><span class="nx">info</span><span class="p">[</span><span class="nx">taskId</span><span class="p">].</span><span class="nx">finish_time</span><span class="p">);</span>
+                    <span class="c1">// 修改结果文件大小</span>
+                    <span class="kd">var</span> <span class="nx">taskFileLine</span> <span class="o">=</span> <span class="nx">res</span><span class="p">.</span><span class="nx">info</span><span class="p">[</span><span class="nx">taskId</span><span class="p">].</span><span class="nx">task_result_line</span> <span class="p">?</span> <span class="nx">res</span><span class="p">.</span><span class="nx">info</span><span class="p">[</span><span class="nx">taskId</span><span class="p">].</span><span class="nx">task_result_line</span> <span class="p">:</span> <span class="mi">0</span><span class="p">;</span>
+                    <span class="kd">var</span> <span class="nx">taskFileSize</span> <span class="o">=</span> <span class="nx">res</span><span class="p">.</span><span class="nx">info</span><span class="p">[</span><span class="nx">taskId</span><span class="p">].</span><span class="nx">task_result_size</span> <span class="p">?</span> <span class="nx">res</span><span class="p">.</span><span class="nx">info</span><span class="p">[</span><span class="nx">taskId</span><span class="p">].</span><span class="nx">task_result_size</span> <span class="p">:</span> <span class="s1">'0B'</span><span class="p">;</span>
+                    <span class="nx">$</span><span class="p">(</span><span class="s1">'#task-result-file-'</span><span class="o">+</span><span class="nx">taskId</span><span class="p">).</span><span class="nx">text</span><span class="p">(</span><span class="nx">taskFileSize</span> <span class="o">+</span> <span class="s1">' / '</span> <span class="o">+</span> <span class="nx">taskFileLine</span> <span class="o">+</span> <span class="s1">' 行'</span><span class="p">);</span>
+                    <span class="c1">// 显示预览按钮</span>
+                    <span class="nx">$</span><span class="p">(</span><span class="s1">'#task-result-file-preview-'</span><span class="o">+</span><span class="nx">taskId</span><span class="p">).</span><span class="nx">removeClass</span><span class="p">(</span><span class="s1">'hide'</span><span class="p">);</span>
+                    <span class="p">}</span>
+                <span class="p">)</span>
+            <span class="p">}</span><span class="k">else</span><span class="p">{</span>
+                <span class="c1">// for(var i=0;i&lt;res.failed.length;i++){</span>
+                <span class="nx">$</span><span class="p">.</span><span class="nx">each</span><span class="p">(</span><span class="nx">res</span><span class="p">.</span><span class="nx">info</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">i</span><span class="p">,</span> <span class="nx">item</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="kd">var</span> <span class="nx">taskId</span> <span class="o">=</span> <span class="nx">res</span><span class="p">.</span><span class="nx">info</span><span class="p">[</span><span class="nx">i</span><span class="p">].</span><span class="nx">id</span><span class="p">;</span>
+                    <span class="kd">var</span> <span class="nx">failedHtml</span> <span class="o">=</span> <span class="s1">'&lt;div class="alert alert-danger alert-dismissible"&gt;'</span>
+                                     <span class="o">+</span><span class="s1">'    &lt;button type="button" class="close" data-dismiss="alert" aria-hidden="true"&gt;×&lt;/button&gt;'</span>
+                                     <span class="o">+</span><span class="s1">'    &lt;h4&gt;&lt;i class="icon fa fa-ban"&gt;&lt;/i&gt;任务&amp;nbsp;'</span><span class="o">+</span><span class="nx">taskId</span><span class="o">+</span><span class="s1">'&amp;nbsp;失败&lt;/h4&gt;'</span>
+                                     <span class="o">+</span><span class="s1">'     &lt;p&gt;任务&amp;nbsp;&lt;strong&gt;'</span><span class="o">+</span><span class="nx">taskId</span><span class="o">+</span><span class="s1">'&lt;/strong&gt;&amp;nbsp;失败，请&lt;a target="_blank" href="/zmeng/task/index/id/'</span><span class="o">+</span><span class="nx">taskId</span><span class="o">+</span><span class="s1">'"&gt;&lt;strong&gt;点击此处&lt;/strong&gt;&lt;/a&gt;查看。&lt;/p&gt;'</span>
+                                     <span class="o">+</span><span class="s1">'&lt;/div&gt;'</span><span class="p">;</span>
+                    <span class="nx">noticeDiv</span><span class="p">.</span><span class="nx">prepend</span><span class="p">(</span><span class="nx">failedHtml</span><span class="p">);</span>
+                    <span class="nx">changeBtnStat</span><span class="p">(</span><span class="nx">taskId</span><span class="p">,</span><span class="s1">'failed'</span><span class="p">);</span>
+                <span class="p">});</span>
+            <span class="p">}</span>
+            <span class="c1">//如果有新的任务(不管失败还是成功)完成，都打开提示</span>
+            <span class="c1">// if(res.status){</span>
+                <span class="nx">aside</span><span class="p">.</span><span class="nx">addClass</span><span class="p">(</span><span class="s1">'control-sidebar-open'</span><span class="p">);</span>
+            <span class="c1">// }</span>
+                <span class="k">break</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        
+    <span class="p">}</span>
+
+    <span class="kd">function</span> <span class="nx">changeBtnStat</span><span class="p">(</span><span class="nx">id</span><span class="p">,</span><span class="nx">status</span><span class="p">){</span>
+        <span class="kd">var</span> <span class="nx">btn</span> <span class="o">=</span> <span class="nx">$</span><span class="p">(</span><span class="s1">'#task-result-'</span><span class="o">+</span><span class="nx">id</span><span class="p">);</span>
+        <span class="k">if</span><span class="p">(</span><span class="nx">status</span><span class="o">==</span><span class="s1">'success'</span><span class="p">){</span>
+            <span class="nx">btn</span><span class="p">.</span><span class="nx">find</span><span class="p">(</span><span class="s1">'span'</span><span class="p">).</span><span class="nx">removeClass</span><span class="p">(</span><span class="s1">'btn-success zm-task-running zm-task-created'</span><span class="p">).</span><span class="nx">addClass</span><span class="p">(</span><span class="s1">'btn-primary zm-task-finish'</span><span class="p">).</span><span class="nx">text</span><span class="p">(</span><span class="s1">'下载'</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="k">if</span><span class="p">(</span><span class="nx">status</span><span class="o">==</span><span class="s1">'failed'</span><span class="p">){</span>
+            <span class="nx">btn</span><span class="p">.</span><span class="nx">find</span><span class="p">(</span><span class="s1">'span'</span><span class="p">).</span><span class="nx">removeClass</span><span class="p">(</span><span class="s1">'btn-primary zm-task-download'</span><span class="p">).</span><span class="nx">addClass</span><span class="p">(</span><span class="s1">'btn-danger zm-task-created'</span><span class="p">).</span><span class="nx">text</span><span class="p">(</span><span class="s1">'重试'</span><span class="p">);</span>
+        <span class="p">}</span>
+        <span class="k">if</span><span class="p">(</span><span class="nb">window</span><span class="p">.</span><span class="nx">action</span><span class="o">==</span><span class="s1">'index'</span><span class="p">)</span> <span class="nx">init</span><span class="p">();</span>
+    <span class="p">}</span>
+
+
+<span class="p">})</span>
+
+<span class="o">&lt;</span><span class="sr">/script</span><span class="err">&gt;
+</span></code></pre></div></div>
+
+<ul>
+  <li>php后台</li>
+</ul>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="sd">/******************************************* gateWayClient Begin *****************************/</span>
+    <span class="sd">/**
+     * 通过回调函数,调取通知方法,
+     * @param  2017-12-05
+     * @param  [int]      $taskId    任务id
+     * @param  [int]      $uid       绑定用户id
+     * @param  [string]   $error   0 任务成功,1任务失败
+     * @return [type]          [description]
+     */</span>
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">informClient</span><span class="p">(</span> <span class="nv">$taskId</span><span class="o">=</span><span class="mi">329</span><span class="p">,</span> <span class="nv">$uid</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="nv">$error</span><span class="o">=</span><span class="mi">0</span> <span class="p">){</span>
+        <span class="c1">#初始化客户端
+</span>        <span class="nx">vendor</span><span class="p">(</span><span class="s1">'workerman/gatewayclient/Gateway'</span><span class="p">);</span>
+        <span class="nv">$client</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">\GatewayClient\Gateway</span><span class="p">();</span>
+        <span class="nv">$client</span><span class="o">::</span><span class="nv">$registerAddress</span> <span class="o">=</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_gateWayAddress</span><span class="p">;</span>
+        <span class="c1">#要通知的用户
+</span>        <span class="nv">$clientArr</span> <span class="o">=</span> <span class="nv">$client</span><span class="o">::</span><span class="na">getClientIdByUid</span><span class="p">(</span><span class="nv">$uid</span><span class="p">);</span>
+        <span class="c1">#所有通知都通知测试账号
+</span>        <span class="k">if</span><span class="p">(</span> <span class="nv">$uid</span><span class="o">!=</span><span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_testAccountId</span> <span class="o">&amp;&amp;</span> <span class="nv">$client</span><span class="o">::</span><span class="na">isUidOnline</span><span class="p">(</span><span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_testAccountId</span><span class="p">)</span> <span class="p">){</span>
+            <span class="c1">#通过uid获取client_id 
+</span>            <span class="nv">$client_id</span> <span class="o">=</span> <span class="nv">$client</span><span class="o">::</span><span class="na">getClientIdByUid</span><span class="p">(</span><span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_testAccountId</span><span class="p">);</span>
+            <span class="nv">$clientArr</span> <span class="o">=</span> <span class="nb">array_merge</span><span class="p">(</span><span class="nv">$clientArr</span><span class="p">,</span> <span class="nv">$client_id</span> <span class="p">);</span>
+        <span class="p">}</span>
+        <span class="c1">// var_dump($clientArr);die;
+</span>        <span class="c1">#发送通知
+</span>        <span class="nv">$message</span> <span class="o">=</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">informInfo</span><span class="p">(</span> <span class="nv">$taskId</span><span class="p">,</span> <span class="nv">$error</span> <span class="p">);</span>
+        <span class="nv">$client</span><span class="o">::</span><span class="na">sendToAll</span><span class="p">(</span> <span class="nv">$message</span><span class="p">,</span> <span class="nv">$clientArr</span><span class="p">);</span>
+        <span class="nb">var_dump</span><span class="p">(</span><span class="nv">$clientArr</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="sd">/**
+     * 返回给前端的数据
+     * @param  2017-12-06
+     * @param  [type]     $taskId [任务id]
+     * @param  [type]     $error  [0 成功]
+     * @return [type]             [description]
+     */</span>
+    <span class="k">private</span> <span class="k">function</span> <span class="nf">informInfo</span><span class="p">(</span> <span class="nv">$taskId</span><span class="p">,</span> <span class="nv">$error</span> <span class="p">){</span>
+        <span class="c1">// 根据 $newSuccessTasks 查找完成任务的基本信息
+</span>        <span class="nv">$taskInfo</span> <span class="o">=</span> <span class="nx">M</span><span class="p">(</span><span class="s1">'Task'</span><span class="p">)</span><span class="o">-&gt;</span><span class="na">where</span><span class="p">([</span><span class="s1">'id'</span><span class="o">=&gt;</span><span class="p">[</span><span class="s1">'eq'</span><span class="p">,</span> <span class="nv">$taskId</span><span class="p">]])</span><span class="o">-&gt;</span><span class="na">getField</span><span class="p">(</span><span class="s1">'id,task_result,task_result_line,finish_time'</span><span class="p">)</span><span class="o">?:</span> <span class="p">[];</span>
+        <span class="k">foreach</span><span class="p">(</span><span class="nv">$taskInfo</span> <span class="k">as</span> <span class="nv">$key</span> <span class="o">=&gt;</span> <span class="nv">$value</span><span class="p">){</span>
+            <span class="nv">$Info</span><span class="p">[</span><span class="nv">$key</span><span class="p">][</span><span class="s1">'task_result_size'</span><span class="p">]</span> <span class="o">=</span> <span class="nx">format_file_isze</span><span class="p">(</span><span class="nb">filesize</span><span class="p">(</span><span class="nv">$value</span><span class="p">[</span><span class="s1">'task_result'</span><span class="p">]));</span>
+            <span class="nv">$Info</span><span class="p">[</span><span class="nv">$key</span><span class="p">][</span><span class="s1">'finish_time'</span><span class="p">]</span> <span class="o">=</span> <span class="nb">date</span><span class="p">(</span><span class="s1">'Y-m-d H:i:s'</span><span class="p">,</span> <span class="nv">$value</span><span class="p">[</span><span class="s1">'finish_time'</span><span class="p">]);</span>
+            <span class="nv">$Info</span><span class="p">[</span><span class="nv">$key</span><span class="p">][</span><span class="s1">'id'</span><span class="p">]</span> <span class="o">=</span> <span class="nv">$value</span><span class="p">[</span><span class="s1">'id'</span><span class="p">];</span>
+            <span class="nb">unset</span><span class="p">(</span><span class="nv">$Info</span><span class="p">[</span><span class="nv">$key</span><span class="p">][</span><span class="s1">'task_result'</span><span class="p">]);</span>
+        <span class="p">}</span>
+        <span class="k">return</span>  <span class="nb">json_encode</span><span class="p">([</span><span class="s1">'status'</span>  <span class="o">=&gt;</span> <span class="nv">$error</span><span class="p">,</span><span class="s1">'info'</span> <span class="o">=&gt;</span> <span class="nv">$Info</span><span class="p">]);</span>
+    <span class="p">}</span>
+
+
+    <span class="c1">#绑定用户uid和client_id
+</span>    <span class="sd">/**
+     * 绑定用户uid和client_id
+     * @param  2017-12-06
+     * @param  [int]         $uid   要绑定的用户uid
+     * @param  [int]         $client_id client_id
+     * @return [type]     [description]
+     */</span>
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">bind</span><span class="p">()</span>
+    <span class="p">{</span>
+        <span class="nx">vendor</span><span class="p">(</span><span class="s1">'workerman/gatewayclient/Gateway'</span><span class="p">);</span>
+        <span class="nv">$client</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">\GatewayClient\Gateway</span><span class="p">();</span>
+        <span class="c1">// 用户连接websocket之后,绑定uid和clientid,同时进行分组,根据接收到的roomid进行分组操作
+</span>        <span class="nv">$uid</span><span class="o">=</span><span class="nx">session</span><span class="p">(</span><span class="s1">'uid'</span><span class="p">);</span>
+        <span class="nv">$client_id</span><span class="o">=</span><span class="nx">I</span><span class="p">(</span><span class="s1">'post.client_id'</span><span class="p">);</span>
+        <span class="c1">//注册地址配置
+</span>        <span class="nv">$client</span><span class="o">::</span><span class="nv">$registerAddress</span> <span class="o">=</span> <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">_gateWayAddress</span><span class="p">;</span>
+        <span class="c1">// client_id与uid绑定
+</span>        <span class="nv">$client</span><span class="o">::</span><span class="na">bindUid</span><span class="p">(</span><span class="nv">$client_id</span><span class="p">,</span> <span class="nv">$uid</span><span class="p">);</span>
+        <span class="c1">#写入调试
+</span>        <span class="c1">// $f = fopen('ab.txt','a');
+</span>        <span class="c1">// fwrite($f, $client_id);
+</span>        <span class="c1">// fclose($f);
+</span>        <span class="k">exit</span><span class="p">(</span><span class="nb">json_encode</span><span class="p">([</span><span class="s1">'status'</span><span class="o">=&gt;</span><span class="mi">3</span><span class="p">,</span><span class="s1">'msg'</span><span class="o">=&gt;</span><span class="s1">'ok'</span><span class="p">]));</span>
+    <span class="p">}</span>
+
+    <span class="sd">/***********************************gateWayClient  END *********************************/</span>
+
+</code></pre></div></div>
+
+    </article>
+    
+    <div class="social-share-wrapper">
+        <div class="social-share"></div>
+    </div>
+    
+</div>
+
+<section class="author-detail">
+    <section class="post-footer-item author-card">
+        <div class="avatar">
+            <img src="http://localhost:4000/assets/img/profile.png" alt="">
+        </div>
+        <div class="author-name" rel="author">gojson</div>
+        <div class="bio">
+            <p>PHP开发者,热爱技术,分享知识,共同成长</p>
+        </div>
+        
+        <ul class="sns-links">
+            
+            <li>
+                <a href="//weibo.com/u/1008277207/home?topnav=1&wvr=6" target="_blank">
+                    <i class="iconfont icon-weibo"></i>
+                </a>
+            </li>
+            
+            <li>
+                <a href="//juejin.im/user/57a6f434165abd006159b4cc" target="_blank">
+                    <i class="iconfont icon-juejin"></i>
+                </a>
+            </li>
+            
+            <li>
+                <a href="//github.com/gojson" target="_blank">
+                    <i class="iconfont icon-github"></i>
+                </a>
+            </li>
+            
+        </ul>
+        
+    </section>
+    <section class="post-footer-item read-next">
+        
+        <div class="read-next-item">
+            <a href="/php/2017/12/07/laravel_quque_database.html" class="read-next-link"></a>
+            <section>
+                <span>Laravel配置redis队列-Database</span>
+                <p>1.0 情景描述:使用Laravel5.4框架,处理消息队列，redis队列的database方式</p>
+            </section>
+            
+            <div class="filter"></div>
+            <img src="http://on2171g4d.bkt.clouddn.com/jekyll-theme-h2o-postcover.jpg" alt="">
+            
+        </div>
+        
+        
+        <div class="read-next-item">
+            <a href="/%E6%8A%80%E6%9C%AF/2017/04/18/new-theme-h2o.html" class="read-next-link"></a>
+            <section>
+                <span>H2O theme for Jekyll</span>
+                <p>正如我在微博上所说的，使用Jekyll半年以来一直没有令我满意的主题模板，所以开始计划自己写一套好看又好用的主题模...</p>
+            </section>
+            
+            <div class="filter"></div>
+            <img src="http://on2171g4d.bkt.clouddn.com/jekyll-theme-h2o-postcover.jpg" alt="">
+            
+        </div>
+        
+    </section>
+    
+</section>
+
+<footer class="g-footer">
+    <section>goJson的独立博客 © 2017</section>
+    <section>Powered by <a href="//gojson.cn">Json</a> | <a href="https://github.com/gojson">H20</a></section>
+</footer>
+
+
+<!--
+<script src="/assets/js/social-share.min.js"></script>
+
+<script>
+   socialShare('.social-share', {
+        sites: ['wechat','weibo','douban','twitter'],
+        wechatQrcodeTitle: "分享到微信朋友圈",
+        wechatQrcodeHelper: '<p>扫码后点击右上角</p><p>将本文分享至朋友圈</p>'
+    });
+</script>
+-->
+<script>
+
+/**
+*  RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
+*  LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables*/
+/*
+var disqus_config = function () {
+this.page.url = PAGE_URL;  // Replace PAGE_URL with your page's canonical URL variable
+this.page.identifier = PAGE_IDENTIFIER; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+};
+*/
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+/*写入自己的disqus信息*/
+s.src = 'https://liaokeyu.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<script src="https://cdn.staticfile.org/jquery/3.2.1/jquery.min.js"></script>
+<script src="/assets/js/prism.js"></script>
+<script src="/assets/js/index.min.js"></script>
+</body>
+</html>

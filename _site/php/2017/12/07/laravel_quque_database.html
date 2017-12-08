@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laravel配置redis队列-Database - goJson的独立博客</title>
+    <meta name="author"  content="gojson">
+    <meta name="description" content="Laravel配置redis队列-Database">
+    <meta name="keywords"  content="php">
+    <!-- Open Graph -->
+    <meta property="og:title" content="Laravel配置redis队列-Database - goJson的独立博客">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="http://localhost:4000/php/2017/12/07/laravel_quque_database.html">
+    <meta property="og:description" content="gojson record my life with you,record my simple IT level。">
+    <meta property="og:site_name" content="goJson的独立博客">
+    <link rel="stylesheet" href="//cdn.staticfile.org/normalize/6.0.0/normalize.min.css">
+    <link rel="stylesheet" href="//at.alicdn.com/t/font_roc50gemkxpw4s4i.css">
+    <link rel="stylesheet" href="/assets/css/github-markdown.css">
+    <link rel="stylesheet" href="/assets/css/prism.css">
+    <link rel="stylesheet" href="/assets/css/share.min.css">
+    <link rel="stylesheet" href="/assets/css/app.min.css">
+</head>
+<body>
+    <!--[if lt IE 10]>
+<div class="alert-danger" role="alert">你的浏览器实在太太太旧了，放学别走，升级完浏览器再说！<a target="_blank" class="alert-link" href="http://browsehappy.com">立即升级</a></div>
+<![endif]-->
+<input id="nm-switch" type="hidden" value="true">
+
+<header class="g-header">
+    <div class="g-logo">
+      <a href="/"></a>
+    </div>
+    <i id="menu-toggle" class="iconfont icon-menu"></i>
+    <nav class="g-nav">
+        <ul>
+            
+            <li><a href="/">home</a></li>
+            
+            <li><a href="/tags.html">tags</a></li>
+            
+        </ul>
+    </nav>
+</header>
+
+
+<header class="g-banner post-header post-pattern-circuitBoard bgcolor-default " data-theme="default">
+    <div class="post-wrapper">
+        <div class="post-tags">
+            
+            
+            <a href="http://localhost:4000/tags#php" class="post-tag">php</a>
+            
+            
+        </div>
+        <h1>Laravel配置redis队列-Database</h1>
+        <div class="post-meta">
+            <span class="post-meta-item"><i class="iconfont icon-author"></i><a href="http://localhost:4000" target="_blank" rel="author">gojson</a></></span>
+            <time class="post-meta-item" datetime="17-12-07"><i class="iconfont icon-date"></i>07 Dec 2017</time>
+        </div>
+    </div>
+    
+    <div class="filter"></div>
+    <div class="post-cover" style="background: url('http://on2171g4d.bkt.clouddn.com/jekyll-theme-h2o-postcover.jpg') center no-repeat; background-size: cover;">
+    
+</header>
+
+<div class="post-content">
+    
+    <h2 class="post-subtitle">redis-queue-Database</h2>
+    
+    <article class="markdown-body">
+        <h2 id="10-情景描述">1.0 情景描述:</h2>
+<p>使用Laravel5.4框架,处理消息队列，redis队列的database方式</p>
+
+<h2 id="20-官网地址">2.0 官网地址</h2>
+<ul>
+  <li><a href="https://laravel.com/docs/5.4/queues">官网安装文档地址</a></li>
+  <li><strong>安装步骤:</strong>
+    <ol>
+      <li>php artisan queue:table ,php artisan migrate      //创建job table,用来记录任务,</li>
+      <li>database.php ,</li>
+    </ol>
+
+    <div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s1">'redis'</span> <span class="o">=&gt;</span> <span class="p">[</span>
+  <span class="s1">'driver'</span> <span class="o">=&gt;</span> <span class="s1">'redis'</span><span class="p">,</span>
+  <span class="s1">'connection'</span> <span class="o">=&gt;</span> <span class="s1">'default'</span><span class="p">,</span>
+  <span class="s1">'queue'</span> <span class="o">=&gt;</span> <span class="s1">'{default}'</span><span class="p">,</span>
+  <span class="s1">'retry_after'</span> <span class="o">=&gt;</span> <span class="mi">90</span><span class="p">,</span>
+<span class="p">],</span>
+</code></pre></div>    </div>
+    <ol>
+      <li>app.php</li>
+    </ol>
+  </li>
+</ul>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s1">'default'</span> <span class="o">=&gt;</span> <span class="nx">env</span><span class="p">(</span><span class="s1">'QUEUE_DRIVER'</span><span class="p">,</span> <span class="s1">'database'</span><span class="p">),</span>
+</code></pre></div></div>
+<ol>
+  <li>监听任务()</li>
+</ol>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">php</span> <span class="nx">artisan</span> <span class="nx">queue</span><span class="o">:</span><span class="nx">work</span> <span class="o">--</span><span class="nx">queue</span><span class="o">=</span><span class="nx">high</span><span class="p">,</span><span class="k">default</span>
+</code></pre></div></div>
+<ol>
+  <li>创建任务处理类</li>
+</ol>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">php</span> <span class="nx">artisan</span> <span class="nx">make</span><span class="o">:</span><span class="nx">job</span> <span class="nx">SendEmail</span>
+</code></pre></div></div>
+<ol>
+  <li>生产任务</li>
+</ol>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<span class="k">namespace</span> <span class="nx">App\Http\Controllers</span><span class="p">;</span>
+
+<span class="k">use</span> <span class="nx">App\Jobs\ProcessPodcast</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">Illuminate\Http\Request</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">App\Http\Controllers\Controller</span><span class="p">;</span>
+
+<span class="k">class</span> <span class="nc">PodcastController</span> <span class="k">extends</span> <span class="nx">Controller</span>
+<span class="p">{</span>
+    <span class="sd">/**
+     * Store a new podcast.
+     *
+     * @param  Request  $request
+     * @return Response
+     */</span>
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">store</span><span class="p">(</span><span class="nx">Request</span> <span class="nv">$request</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="c1">//dispatch(new SendEmail($arr));
+</span>	<span class="nx">dispatch</span><span class="p">((</span><span class="k">new</span> <span class="nx">Job</span><span class="p">)</span><span class="o">-&gt;</span><span class="na">onQueue</span><span class="p">(</span><span class="s1">'high'</span><span class="p">));</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<p>6 任务类</p>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+
+<span class="k">namespace</span> <span class="nx">App\Jobs</span><span class="p">;</span>
+
+<span class="k">use</span> <span class="nx">App\Podcast</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">App\AudioProcessor</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">Illuminate\Bus\Queueable</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">Illuminate\Queue\SerializesModels</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">Illuminate\Queue\InteractsWithQueue</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">Illuminate\Contracts\Queue\ShouldQueue</span><span class="p">;</span>
+<span class="k">use</span> <span class="nx">Illuminate\Foundation\Bus\Dispatchable</span><span class="p">;</span>
+
+<span class="k">class</span> <span class="nc">SendEmail</span> <span class="k">implements</span> <span class="nx">ShouldQueue</span>
+<span class="p">{</span>
+    <span class="k">use</span> <span class="nx">Dispatchable</span><span class="p">,</span> <span class="nx">InteractsWithQueue</span><span class="p">,</span> <span class="nx">Queueable</span><span class="p">,</span> <span class="nx">SerializesModels</span><span class="p">;</span>
+
+    <span class="k">protected</span> <span class="nv">$podcast</span><span class="p">;</span>
+
+    <span class="sd">/**
+     * Create a new job instance.
+     *
+     * @param  Podcast  $podcast
+     * @return void
+     */</span>
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">__construct</span><span class="p">(</span><span class="nx">Podcast</span> <span class="nv">$podcast</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="nv">$this</span><span class="o">-&gt;</span><span class="na">podcast</span> <span class="o">=</span> <span class="nv">$podcast</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="sd">/**
+     * Execute the job.
+     *
+     * @param  AudioProcessor  $processor
+     * @return void
+     */</span>
+    <span class="k">public</span> <span class="k">function</span> <span class="nf">handle</span><span class="p">(</span><span class="nx">AudioProcessor</span> <span class="nv">$processor</span><span class="p">)</span>
+    <span class="p">{</span>
+     	<span class="c1">//处理任务逻辑
+</span>    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+<ol>
+  <li>重启任务</li>
+</ol>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">php</span> <span class="nx">artisan</span> <span class="nx">queue</span><span class="o">:</span><span class="nx">restart</span>
+</code></pre></div></div>
+
+    </article>
+    
+    <div class="social-share-wrapper">
+        <div class="social-share"></div>
+    </div>
+    
+</div>
+
+<section class="author-detail">
+    <section class="post-footer-item author-card">
+        <div class="avatar">
+            <img src="http://localhost:4000/assets/img/profile.png" alt="">
+        </div>
+        <div class="author-name" rel="author">gojson</div>
+        <div class="bio">
+            <p>PHP开发者,热爱技术,分享知识,共同成长</p>
+        </div>
+        
+        <ul class="sns-links">
+            
+            <li>
+                <a href="//weibo.com/u/1008277207/home?topnav=1&wvr=6" target="_blank">
+                    <i class="iconfont icon-weibo"></i>
+                </a>
+            </li>
+            
+            <li>
+                <a href="//juejin.im/user/57a6f434165abd006159b4cc" target="_blank">
+                    <i class="iconfont icon-juejin"></i>
+                </a>
+            </li>
+            
+            <li>
+                <a href="//github.com/gojson" target="_blank">
+                    <i class="iconfont icon-github"></i>
+                </a>
+            </li>
+            
+        </ul>
+        
+    </section>
+    <section class="post-footer-item read-next">
+        
+        <div class="read-next-item">
+            <a href="/php/2017/12/07/rabbitmq.html" class="read-next-link"></a>
+            <section>
+                <span>rabbitmq消息队列</span>
+                <p>1.0 情景描述:处理消息队列,rabbitmq.</p>
+            </section>
+            
+            <div class="filter"></div>
+            <img src="http://on2171g4d.bkt.clouddn.com/jekyll-theme-h2o-postcover.jpg" alt="">
+            
+        </div>
+        
+        
+        <div class="read-next-item">
+            <a href="/php/2017/12/07/gatewayworker.html" class="read-next-link"></a>
+            <section>
+                <span>gateWayWorker服务器回调</span>
+                <p>1.0 情景描述:客户端上传文件发起任务-&gt;等待远程服务器处理任务,任务处理完成-&gt;回调接口-&gt;...</p>
+            </section>
+            
+            <div class="filter"></div>
+            <img src="/notes.jpg" alt="">
+            
+        </div>
+        
+    </section>
+    
+</section>
+
+<footer class="g-footer">
+    <section>goJson的独立博客 © 2017</section>
+    <section>Powered by <a href="//gojson.cn">Json</a> | <a href="https://github.com/gojson">H20</a></section>
+</footer>
+
+
+<!--
+<script src="/assets/js/social-share.min.js"></script>
+
+<script>
+   socialShare('.social-share', {
+        sites: ['wechat','weibo','douban','twitter'],
+        wechatQrcodeTitle: "分享到微信朋友圈",
+        wechatQrcodeHelper: '<p>扫码后点击右上角</p><p>将本文分享至朋友圈</p>'
+    });
+</script>
+-->
+<script>
+
+/**
+*  RECOMMENDED CONFIGURATION VARIABLES: EDIT AND UNCOMMENT THE SECTION BELOW TO INSERT DYNAMIC VALUES FROM YOUR PLATFORM OR CMS.
+*  LEARN WHY DEFINING THESE VARIABLES IS IMPORTANT: https://disqus.com/admin/universalcode/#configuration-variables*/
+/*
+var disqus_config = function () {
+this.page.url = PAGE_URL;  // Replace PAGE_URL with your page's canonical URL variable
+this.page.identifier = PAGE_IDENTIFIER; // Replace PAGE_IDENTIFIER with your page's unique identifier variable
+};
+*/
+(function() { // DON'T EDIT BELOW THIS LINE
+var d = document, s = d.createElement('script');
+/*写入自己的disqus信息*/
+s.src = 'https://liaokeyu.disqus.com/embed.js';
+s.setAttribute('data-timestamp', +new Date());
+(d.head || d.body).appendChild(s);
+})();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<script src="https://cdn.staticfile.org/jquery/3.2.1/jquery.min.js"></script>
+<script src="/assets/js/prism.js"></script>
+<script src="/assets/js/index.min.js"></script>
+</body>
+</html>
